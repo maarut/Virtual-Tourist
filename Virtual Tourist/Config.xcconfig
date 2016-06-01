@@ -1,0 +1,10 @@
+//
+//  Config.xcconfig
+//  Virtual Tourist
+//
+//  Created by Maarut Chandegra on 01/06/2016.
+//  Copyright © 2016 Maarut Chandegra. All rights reserved.
+//
+#include "Keys.xcconfig"
+
+GCC_PREPROCESSOR_DEFINITIONS = $(inherited) FLICKR_API_KEY=@\"$(FLICKR_API_KEY)\" FLICKR_API_SECRET=@\"$(FLICKR_API_SECRET)\"
