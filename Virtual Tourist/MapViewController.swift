@@ -46,6 +46,7 @@ class MapViewController: UIViewController
                 if let annotationToPassOn = annotationToPassOn {
                     let nextVC = segue.destinationViewController as! AlbumViewController
                     nextVC.annotation = annotationToPassOn
+                    mapView.deselectAnnotation(annotationToPassOn, animated: false)
                 }
                 break
             default:
@@ -65,9 +66,20 @@ extension MapViewController
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
             let annotation = MKPointAnnotation()
             annotation.coordinate = coordinate
-            annotation.title = "Title"
-            annotation.subtitle = "Description"
+            CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), completionHandler: { (placemarks, error) in
+                guard error == nil else {
+                    NSLog("\(error!.localizedDescription)\n\(error!.description)")
+                    return
+                }
+                if let placemark = placemarks?.first {
+                    annotation.title = placemark.name
+                }
+                else {
+                    NSLog("No placemarks identified for location at coordinates \(coordinate)")
+                }
+            })
             mapView.addAnnotation(annotation)
+            mapView.selectAnnotation(annotation, animated: true)
         }
     }
 }
@@ -75,10 +87,12 @@ extension MapViewController
 // MARK: - MKMapViewDelegate Implementation
 extension MapViewController: MKMapViewDelegate
 {
-    func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView)
+    func mapView(mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl)
     {
-        annotationToPassOn = view.annotation
-        performSegueWithIdentifier("albumViewSegue", sender: self)
+        if control == view.rightCalloutAccessoryView {
+            annotationToPassOn = view.annotation
+            performSegueWithIdentifier("albumViewSegue", sender: self)
+        }
     }
     
     func mapView(mapView: MKMapView, viewForAnnotation annotation: MKAnnotation) -> MKAnnotationView?
@@ -93,8 +107,10 @@ extension MapViewController: MKMapViewDelegate
         }
         else {
             pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
+            pinView!.canShowCallout = true
             pinView!.pinTintColor = UIColor.redColor()
             pinView!.animatesDrop = true
+            pinView!.rightCalloutAccessoryView = UIButton(type: .DetailDisclosure)
         }
         return pinView
     }

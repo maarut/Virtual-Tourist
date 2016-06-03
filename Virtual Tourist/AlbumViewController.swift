@@ -27,6 +27,7 @@ class AlbumViewController: UIViewController
         if let annotation = annotation {
             mapView.setRegion(MKCoordinateRegionMakeWithDistance(annotation.coordinate, 1000, 1000), animated: true)
             mapView.addAnnotation(annotation)
+            mapView.selectAnnotation(annotation, animated: true)
         }
     }
 }
@@ -57,6 +58,7 @@ extension AlbumViewController: MKMapViewDelegate
             pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
             pinView!.pinTintColor = UIColor.redColor()
             pinView!.animatesDrop = false
+            pinView!.canShowCallout = true
         }
         return pinView
     }

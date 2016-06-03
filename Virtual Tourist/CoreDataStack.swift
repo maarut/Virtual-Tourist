@@ -13,7 +13,7 @@ class CoreDataStack
 {
     static let instance: CoreDataStack = {
         if let i = CoreDataStack() { return i }
-        fatalError("Unable to create Core Data stack")
+        fatalError("Unable to instantiate Core Data stack")
     }()
     
     private static let modelFileName = "VirtualTouristModel"
