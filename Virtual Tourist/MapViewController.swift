@@ -18,14 +18,9 @@ class MapViewController: UIViewController
     
     // MARK: - Private Variables
     private var annotationToPassOn: MKAnnotation?
+    private let geocoder = CLGeocoder()
     
     // MARK: - Overrides
-    override func viewDidLoad()
-    {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-    }
-
     override func viewWillAppear(animated: Bool)
     {
         super.viewWillAppear(animated)
@@ -66,7 +61,7 @@ extension MapViewController
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
             let annotation = MKPointAnnotation()
             annotation.coordinate = coordinate
-            CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), completionHandler: { (placemarks, error) in
+            geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), completionHandler: { (placemarks, error) in
                 guard error == nil else {
                     NSLog("\(error!.localizedDescription)\n\(error!.description)")
                     return

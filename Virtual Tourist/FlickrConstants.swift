@@ -47,16 +47,6 @@ extension FlickrClient
         
         struct ParameterValues
         {
-            static func parameterValueForImageSize(size: FlickrImageSize) -> String
-            {
-                switch size {
-                case .Medium:
-                    return "url_z"
-                case .Large:
-                    return "url_h"
-                }
-            }
-            
             static let SafeSearchOn = "1"
             static let JSONFormat = "json"
             static let NoJSONCallbackOn = "1"
@@ -66,6 +56,17 @@ extension FlickrClient
         {
             static let Status = "stat"
             static let Photos = "photos"
+        }
+    
+    }
+    
+    static func parameterValueForImageSize(size: FlickrImageSize) -> String
+    {
+        switch size {
+        case .Medium:
+            return "url_z"
+        case .Large:
+            return "url_h"
         }
     }
 }

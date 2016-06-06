@@ -52,7 +52,7 @@ class FlickrClient
     {
         let parameters: [String: AnyObject] = [
             Constants.ParameterKeys.Method: Constants.Methods.Search,
-            Constants.ParameterKeys.Extras: Constants.ParameterValues.parameterValueForImageSize(.Medium),
+            Constants.ParameterKeys.Extras: FlickrClient.parameterValueForImageSize(.Medium),
             Constants.ParameterKeys.Longitude: longitude,
             Constants.ParameterKeys.Latitude: latitude,
             Constants.ParameterKeys.SafeSearch: Constants.ParameterValues.SafeSearchOn,

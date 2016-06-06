@@ -82,6 +82,9 @@
                                                 <imageView userInteractionEnabled="NO" tag="1" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="jmg-n4-uWJ">
                                                     <rect key="frame" x="0.0" y="0.0" width="100" height="100"/>
                                                 </imageView>
+                                                <activityIndicatorView hidden="YES" opaque="NO" tag="2" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" hidesWhenStopped="YES" style="gray" translatesAutoresizingMaskIntoConstraints="NO" id="Nyl-OB-h08">
+                                                    <rect key="frame" x="40" y="40" width="20" height="20"/>
+                                                </activityIndicatorView>
                                             </subviews>
                                             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                                         </view>
@@ -90,6 +93,8 @@
                                             <constraint firstItem="jmg-n4-uWJ" firstAttribute="leading" secondItem="nNC-9b-Ve7" secondAttribute="leading" id="CXr-Dr-70f"/>
                                             <constraint firstAttribute="bottom" secondItem="jmg-n4-uWJ" secondAttribute="bottom" id="YTx-qn-ZFC"/>
                                             <constraint firstAttribute="trailing" secondItem="jmg-n4-uWJ" secondAttribute="trailing" id="mL9-eS-mbp"/>
+                                            <constraint firstItem="Nyl-OB-h08" firstAttribute="centerX" secondItem="nNC-9b-Ve7" secondAttribute="centerX" id="qjR-Mb-g39"/>
+                                            <constraint firstItem="Nyl-OB-h08" firstAttribute="centerY" secondItem="nNC-9b-Ve7" secondAttribute="centerY" id="w49-hx-Knn"/>
                                         </constraints>
                                     </collectionViewCell>
                                 </cells>

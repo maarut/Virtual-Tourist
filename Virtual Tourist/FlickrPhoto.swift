@@ -32,15 +32,7 @@ class FlickrPhoto
         guard let id = Int((parsedJSON[FlickrPhoto.idKey] as? String ?? "")) else {
             throw makeError("Key \"\(FlickrPhoto.idKey)\" not found", code: .IDNotFound)
         }
-        let urlKey: String
-        switch imageSize {
-        case .Medium:
-            urlKey = FlickrPhoto.baseUrlKey + "z"
-            break
-        case .Large:
-            urlKey = FlickrPhoto.baseUrlKey + "h"
-            break
-        }
+        let urlKey = FlickrClient.parameterValueForImageSize(imageSize)
         guard let url = parsedJSON[urlKey] as? String else {
             throw makeError("Key \"\(urlKey)\" not found", code: .URLNotFound)
         }

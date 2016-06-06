@@ -11,13 +11,6 @@ import CoreData
 
 class CoreDataStack
 {
-    static let instance: CoreDataStack = {
-        if let i = CoreDataStack() { return i }
-        fatalError("Unable to instantiate Core Data stack")
-    }()
-    
-    private static let modelFileName = "VirtualTouristModel"
-    
     private let model: NSManagedObjectModel
     private let coordinator: NSPersistentStoreCoordinator
     private let dbURL: NSURL
@@ -26,9 +19,9 @@ class CoreDataStack
     
     let context: NSManagedObjectContext
     
-    private init?()
+    init?(withModelName modelName: String)
     {
-        guard let modelUrl = NSBundle.mainBundle().URLForResource(CoreDataStack.modelFileName, withExtension: "momd") else {
+        guard let modelUrl = NSBundle.mainBundle().URLForResource(modelName, withExtension: "momd") else {
             NSLog("Unable to find model in bundle")
             return nil
         }
@@ -42,7 +35,7 @@ class CoreDataStack
         }
         self.model = model
         coordinator = NSPersistentStoreCoordinator(managedObjectModel: model)
-        dbURL = docsDir.URLByAppendingPathComponent("\(CoreDataStack.modelFileName).sqlite")
+        dbURL = docsDir.URLByAppendingPathComponent("\(modelName).sqlite")
         
         persistingContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
         persistingContext.name = "Persisting"
@@ -120,11 +113,9 @@ class CoreDataStack
 
 private func logErrorAndAbort(error: NSError)
 {
-    var errorString = "Error while saving: \(error.localizedDescription)\n\(error)\n"
+    var errorString = "Core Data Error: \(error.localizedDescription)\n\(error)\n"
     if let detailedErrors = error.userInfo[NSDetailedErrorsKey] as? [NSError] {
-        for e in detailedErrors {
-            errorString += "\(e.localizedDescription)\n\(e)\n"
-        }
+        detailedErrors.forEach { errorString += "\($0.localizedDescription)\n\($0)\n" }
     }
     fatalError(errorString)
 }
