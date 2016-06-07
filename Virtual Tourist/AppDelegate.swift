@@ -12,10 +12,20 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private (set) var coreDataStack: CoreDataStack!
 
 
-    func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
+    func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool
+    {
         // Override point for customization after application launch.
+        coreDataStack = CoreDataStack(withModelName: "VirtualTouristModel")
+//        do {
+//            try coreDataStack.dropAllData()
+//        }
+//        catch {
+//            NSLog("Unable to drop data")
+//        }
+        coreDataStack.autoSaveWithInterval(30)
         return true
     }
 

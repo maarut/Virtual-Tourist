@@ -43,10 +43,6 @@ class FlickrPhoto
     
     static func photoArrayFromJSON(parsedJson: [[String: AnyObject]], imageSize: FlickrClient.FlickrImageSize) throws -> [FlickrPhoto]
     {
-        var parsedPhotos = [FlickrPhoto]()
-        for photo in parsedJson {
-            try parsedPhotos.append(FlickrPhoto(parsedJSON: photo, imageSize: imageSize))
-        }
-        return parsedPhotos
+        return try parsedJson.map { try FlickrPhoto(parsedJSON: $0, imageSize: imageSize) }
     }
 }

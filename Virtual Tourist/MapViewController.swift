@@ -8,6 +8,7 @@
 
 import UIKit
 import MapKit
+import CoreData
 
 // MARK: - UIViewController Implementation
 class MapViewController: UIViewController
@@ -18,9 +19,30 @@ class MapViewController: UIViewController
     
     // MARK: - Private Variables
     private var annotationToPassOn: MKAnnotation?
+    private var fetchedResultsController: NSFetchedResultsController!
     private let geocoder = CLGeocoder()
     
+    // MARK: - Public Variables
+    var coreDataStack: CoreDataStack!
+    
     // MARK: - Overrides
+    override func viewDidLoad()
+    {
+        super.viewDidLoad()
+        coreDataStack = (UIApplication.sharedApplication().delegate as! AppDelegate).coreDataStack
+        fetchedResultsController = coreDataStack.allPins()
+        fetchedResultsController.delegate = self
+        do {
+            try fetchedResultsController.performFetch()
+        }
+        catch let error as NSError {
+            NSLog("Unable to performFetch:\n\(error)")
+        }
+        if let pins = fetchedResultsController.fetchedObjects as? [Pin] {
+            loadPins(pins)
+        }
+    }
+    
     override func viewWillAppear(animated: Bool)
     {
         super.viewWillAppear(animated)
@@ -49,6 +71,43 @@ class MapViewController: UIViewController
             }
         }
     }
+    
+    private func annotationForPin(pin: Pin) -> MKPointAnnotation?
+    {
+        let annotations = mapView.annotations as! [MKPointAnnotation]
+        let index = annotations.indexOf {
+            $0.coordinate.latitude == pin.latitude!.doubleValue &&
+            $0.coordinate.longitude == pin.longitude!.doubleValue
+        }
+        if let index = index {
+            return annotations[index]
+        }
+        return nil
+    }
+    
+    private func loadPin(pin: Pin)
+    {
+        mapView.addAnnotation(pin.toMKPointAnnotation())
+    }
+    
+    private func removePin(pin: Pin)
+    {
+        if let annotation = annotationForPin(pin) {
+            mapView.removeAnnotation(annotation)
+        }
+    }
+    
+    private func selectPin(pin: Pin)
+    {
+        if let annotation = annotationForPin(pin) {
+            mapView.selectAnnotation(annotation, animated: true)
+        }
+    }
+    
+    private func loadPins(pins: [Pin])
+    {
+        for pin in pins { loadPin(pin) }
+    }
 }
 
 // MARK: - IBActions
@@ -59,22 +118,20 @@ extension MapViewController
         if sender.state == .Began {
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
-            let annotation = MKPointAnnotation()
-            annotation.coordinate = coordinate
+            let pin = Pin(title: "", longitude: coordinate.longitude, latitude: coordinate.latitude, context: fetchedResultsController.managedObjectContext)
             geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), completionHandler: { (placemarks, error) in
                 guard error == nil else {
                     NSLog("\(error!.localizedDescription)\n\(error!.description)")
                     return
                 }
                 if let placemark = placemarks?.first {
-                    annotation.title = placemark.name
+                    pin.title = placemark.name
+                    self.coreDataStack.save()
                 }
                 else {
                     NSLog("No placemarks identified for location at coordinates \(coordinate)")
                 }
             })
-            mapView.addAnnotation(annotation)
-            mapView.selectAnnotation(annotation, animated: true)
         }
     }
 }
@@ -108,5 +165,40 @@ extension MapViewController: MKMapViewDelegate
             pinView!.rightCalloutAccessoryView = UIButton(type: .DetailDisclosure)
         }
         return pinView
+    }
+}
+
+// MARK: - NSFetchedResultsControllerDelegate Implementation
+extension MapViewController: NSFetchedResultsControllerDelegate
+{
+    func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject, atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
+    {
+        if let pin = anObject as? Pin {
+            switch type {
+            case .Insert:
+                loadPin(pin)
+                break
+            case .Delete:
+                removePin(pin)
+                break
+            case .Update, .Move:
+                if let annotation = annotationForPin(pin) {
+                    annotation.title = pin.title
+                    selectPin(pin)
+                }
+                break
+            }
+        }
+    }
+}
+
+private extension Pin
+{
+    func toMKPointAnnotation() -> MKPointAnnotation
+    {
+        let annotation = MKPointAnnotation()
+        annotation.coordinate = CLLocationCoordinate2D(latitude: self.latitude!.doubleValue, longitude: self.longitude!.doubleValue)
+        annotation.title = self.title
+        return annotation
     }
 }
