@@ -10,8 +10,11 @@ import Foundation
 import CoreData
 
 
-class PhotoContainer: NSManagedObject {
-
-// Insert code here to add functionality to your managed object subclass
-
+class PhotoContainer: NSManagedObject
+{
+    convenience init(context: NSManagedObjectContext, pin: Pin)
+    {
+        self.init(entity: NSEntityDescription.entityForName("PhotoContainer", inManagedObjectContext: context)!, insertIntoManagedObjectContext: context)
+        self.pin = pin
+    }
 }

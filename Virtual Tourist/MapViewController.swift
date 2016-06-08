@@ -18,7 +18,7 @@ class MapViewController: UIViewController
     @IBOutlet var longPressGestureRecogniser: UILongPressGestureRecognizer!
     
     // MARK: - Private Variables
-    private var annotationToPassOn: MKAnnotation?
+    private var selectedPin: Pin?
     private var fetchedResultsController: NSFetchedResultsController!
     private let geocoder = CLGeocoder()
     
@@ -46,6 +46,7 @@ class MapViewController: UIViewController
     {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: true)
+        self.selectedPin = nil
     }
     
     override func viewDidDisappear(animated: Bool)
@@ -59,10 +60,10 @@ class MapViewController: UIViewController
         if let id = segue.identifier {
             switch id {
             case "albumViewSegue":
-                if let annotationToPassOn = annotationToPassOn {
+                if let selectedPin = selectedPin {
                     let nextVC = segue.destinationViewController as! AlbumViewController
-                    nextVC.annotation = annotationToPassOn
-                    mapView.deselectAnnotation(annotationToPassOn, animated: false)
+                    nextVC.pin = selectedPin
+                    deselectPin(selectedPin)
                 }
                 break
             default:
@@ -107,6 +108,13 @@ private extension MapViewController
         }
     }
     
+    func deselectPin(pin: Pin)
+    {
+        if let annotation = annotationForPin(pin) {
+            mapView.deselectAnnotation(annotation, animated: false)
+        }
+    }
+    
     func loadPins(pins: [Pin])
     {
         for pin in pins { loadPin(pin) }
@@ -122,6 +130,7 @@ extension MapViewController
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
             let pin = Pin(title: "", longitude: coordinate.longitude, latitude: coordinate.latitude, context: fetchedResultsController.managedObjectContext)
+            
             geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), completionHandler: { (placemarks, error) in
                 guard error == nil else {
                     NSLog("\(error!.localizedDescription)\n\(error!.description)")
@@ -145,8 +154,14 @@ extension MapViewController: MKMapViewDelegate
     func mapView(mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl)
     {
         if control == view.rightCalloutAccessoryView {
-            annotationToPassOn = view.annotation
-            performSegueWithIdentifier("albumViewSegue", sender: self)
+            if let annotation = view.annotation as? MKPointAnnotation {
+                selectedPin = (fetchedResultsController.fetchedObjects as! [Pin]).first {
+                    $0.latitude?.doubleValue == annotation.coordinate.latitude &&
+                    $0.longitude?.doubleValue == annotation.coordinate.longitude &&
+                    $0.title == annotation.title
+                }
+                performSegueWithIdentifier("albumViewSegue", sender: self)
+            }
         }
     }
     

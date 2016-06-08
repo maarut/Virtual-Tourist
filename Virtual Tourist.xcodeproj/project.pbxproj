@@ -29,6 +29,7 @@
 		E3735B951D081FEE0048158A /* Photo.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3735B8F1D081FEE0048158A /* Photo.swift */; };
 		E3735B961D081FEE0048158A /* PhotoContainer+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3735B901D081FEE0048158A /* PhotoContainer+CoreDataProperties.swift */; };
 		E3735B971D081FEE0048158A /* PhotoContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3735B911D081FEE0048158A /* PhotoContainer.swift */; };
+		E3735B991D0827A70048158A /* Array+utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3735B981D0827A70048158A /* Array+utils.swift */; };
 		E37624AD1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = E37624AB1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodeld */; };
 /* End PBXBuildFile section */
 
@@ -72,6 +73,7 @@
 		E3735B8F1D081FEE0048158A /* Photo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Photo.swift; sourceTree = "<group>"; };
 		E3735B901D081FEE0048158A /* PhotoContainer+CoreDataProperties.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "PhotoContainer+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		E3735B911D081FEE0048158A /* PhotoContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoContainer.swift; sourceTree = "<group>"; };
+		E3735B981D0827A70048158A /* Array+utils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Array+utils.swift"; sourceTree = "<group>"; };
 		E37624AC1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = VirtualTouristModel.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -143,6 +145,7 @@
 			isa = PBXGroup;
 			children = (
 				E3215DB41D007663009D383B /* Range+Utils.swift */,
+				E3735B981D0827A70048158A /* Array+utils.swift */,
 			);
 			name = utils;
 			sourceTree = "<group>";
@@ -327,6 +330,7 @@
 				E3215DB51D007663009D383B /* Range+Utils.swift in Sources */,
 				E3215DA01CFF13F8009D383B /* CoreDataStack.swift in Sources */,
 				E37624AD1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodeld in Sources */,
+				E3735B991D0827A70048158A /* Array+utils.swift in Sources */,
 				E3215DB81D009176009D383B /* FlickrPhoto.swift in Sources */,
 				E3215DBA1D00A5FC009D383B /* FlickrPhotos.swift in Sources */,
 				E3735B961D081FEE0048158A /* PhotoContainer+CoreDataProperties.swift in Sources */,

@@ -18,13 +18,16 @@ class AlbumViewController: UIViewController
     @IBOutlet weak var newCollectionButton: UIBarButtonItem!
     
     // MARK: - Public Variables
-    var annotation: MKAnnotation?
+    var pin: Pin?
     
     override func viewWillAppear(animated: Bool)
     {
         super.viewWillAppear(animated)
         mapView.removeAnnotations(mapView.annotations)
-        if let annotation = annotation {
+        if let pin = pin {
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue, longitude: pin.longitude!.doubleValue)
+            annotation.title = pin.title
             mapView.setRegion(MKCoordinateRegionMakeWithDistance(annotation.coordinate, 1000, 1000), animated: true)
             mapView.addAnnotation(annotation)
             mapView.selectAnnotation(annotation, animated: true)
