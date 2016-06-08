@@ -29,7 +29,6 @@ class MapViewController: UIViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        coreDataStack = (UIApplication.sharedApplication().delegate as! AppDelegate).coreDataStack
         fetchedResultsController = coreDataStack.allPins()
         fetchedResultsController.delegate = self
         do {
