@@ -29,7 +29,7 @@ class MapViewController: UIViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        fetchedResultsController = coreDataStack.allPins()
+        fetchedResultsController = coreDataStack.allPinsWithSortDescriptor(NSSortDescriptor(key: "title", ascending: true))
         fetchedResultsController.delegate = self
         do {
             try fetchedResultsController.performFetch()
@@ -70,13 +70,17 @@ class MapViewController: UIViewController
             }
         }
     }
-    
-    private func annotationForPin(pin: Pin) -> MKPointAnnotation?
+}
+
+// MARK: - Pin -> MapView interface
+private extension MapViewController
+{
+    func annotationForPin(pin: Pin) -> MKPointAnnotation?
     {
         let annotations = mapView.annotations as! [MKPointAnnotation]
         let index = annotations.indexOf {
             $0.coordinate.latitude == pin.latitude!.doubleValue &&
-            $0.coordinate.longitude == pin.longitude!.doubleValue
+                $0.coordinate.longitude == pin.longitude!.doubleValue
         }
         if let index = index {
             return annotations[index]
@@ -84,26 +88,26 @@ class MapViewController: UIViewController
         return nil
     }
     
-    private func loadPin(pin: Pin)
+    func loadPin(pin: Pin)
     {
         mapView.addAnnotation(pin.toMKPointAnnotation())
     }
     
-    private func removePin(pin: Pin)
+    func removePin(pin: Pin)
     {
         if let annotation = annotationForPin(pin) {
             mapView.removeAnnotation(annotation)
         }
     }
     
-    private func selectPin(pin: Pin)
+    func selectPin(pin: Pin)
     {
         if let annotation = annotationForPin(pin) {
             mapView.selectAnnotation(annotation, animated: true)
         }
     }
     
-    private func loadPins(pins: [Pin])
+    func loadPins(pins: [Pin])
     {
         for pin in pins { loadPin(pin) }
     }

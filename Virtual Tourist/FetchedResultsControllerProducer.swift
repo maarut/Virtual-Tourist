@@ -11,10 +11,10 @@ import CoreData
 
 extension CoreDataStack
 {
-    func allPins() -> NSFetchedResultsController
+    func allPinsWithSortDescriptor(sortDescriptor: NSSortDescriptor) -> NSFetchedResultsController
     {
         let request = NSFetchRequest(entityName: "Pin")
-        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        request.sortDescriptors = [sortDescriptor]
         return NSFetchedResultsController(fetchRequest: request, managedObjectContext: context, sectionNameKeyPath: nil, cacheName: nil)
     }
 }
