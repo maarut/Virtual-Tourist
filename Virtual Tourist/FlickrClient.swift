@@ -48,7 +48,7 @@ class FlickrClient
     private init() { _sharedSession = NSURLSession.sharedSession() }
     
     // MARK: - Public Methods
-    func imagesNearLatitude(latitude: Float, longitude: Float, limit: Int = 100, pageNumber: Int = 1, completionHandler: (FlickrPhotos?, NSError?) -> Void) -> NSURLSessionDataTask
+    func imagesNearLatitude(latitude: Double, longitude: Double, limit: Int = 100, pageNumber: Int = 1, completionHandler: (FlickrPhotos?, NSError?) -> Void) -> NSURLSessionDataTask
     {
         let parameters: [String: AnyObject] = [
             Constants.ParameterKeys.Method: Constants.Methods.Search,

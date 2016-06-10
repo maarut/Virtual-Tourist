@@ -14,8 +14,8 @@ import CoreData
 
 extension Photo {
 
+    @NSManaged var imageData: NSData?
     @NSManaged var url: String?
-    @NSManaged var image: NSData?
     @NSManaged var photoContainer: PhotoContainer?
 
 }
