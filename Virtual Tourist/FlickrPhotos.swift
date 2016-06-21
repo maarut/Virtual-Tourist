@@ -31,11 +31,12 @@ class FlickrPhotos
     var total: Int
     var photos: [FlickrPhoto]
     
-    init(parsedJSON: [String: AnyObject], imageSize: FlickrClient.FlickrImageSize) throws
+    init(parsedJSON: [String: AnyObject], imageSize: FlickrImageSize) throws
     {
         func makeError(errorString: String, code: FlickrPhotosErrorCodes) -> NSError
         {
-            return NSError(domain: "FlickrPhotos.init", code: code.rawValue, userInfo: [NSLocalizedDescriptionKey: errorString])
+            return NSError(domain: "FlickrPhotos.init", code: code.rawValue,
+                            userInfo: [NSLocalizedDescriptionKey: errorString])
         }
         
         guard let page = parsedJSON[FlickrPhotos.pageKey] as? Int else {

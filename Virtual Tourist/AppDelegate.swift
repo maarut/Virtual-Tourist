@@ -12,27 +12,29 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    private (set) var coreDataStack: CoreDataStack!
+    private (set) var dataController: DataController!
 
 
     private func dropAllData()
     {
         do {
-            try coreDataStack.dropAllData()
+            try dataController.dropAllData()
         }
         catch {
             NSLog("Unable to drop data")
         }
     }
     
-    func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool
+    func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?)
+        -> Bool
     {
         // Override point for customization after application launch.
-        coreDataStack = CoreDataStack(withModelName: "VirtualTouristModel")
-        if let vc = window?.rootViewController as? UINavigationController, mapVC = vc.topViewController as? MapViewController {
-            mapVC.coreDataStack = coreDataStack
+        dataController = DataController(withModelName: "VirtualTouristModel")
+        if let vc = window?.rootViewController as? UINavigationController,
+            mapVC = vc.topViewController as? MapViewController {
+            mapVC.dataController = dataController
         }
-        coreDataStack.autoSaveWithInterval(30)
+        dataController.autoSaveWithInterval(30)
         return true
     }
 

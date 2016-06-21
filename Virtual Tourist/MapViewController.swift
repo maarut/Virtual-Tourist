@@ -23,13 +23,14 @@ class MapViewController: UIViewController
     private let geocoder = CLGeocoder()
     
     // MARK: - Public Variables
-    var coreDataStack: CoreDataStack!
+    var dataController: DataController!
     
     // MARK: - Overrides
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        fetchedResultsController = coreDataStack.allPinsWithSortDescriptor(NSSortDescriptor(key: "title", ascending: true))
+        fetchedResultsController = dataController.allPinsWithSortDescriptor(NSSortDescriptor(key: "title",
+            ascending: true))
         fetchedResultsController.delegate = self
         do {
             try fetchedResultsController.performFetch()
@@ -129,16 +130,21 @@ extension MapViewController
         if sender.state == .Began {
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
-            let pin = Pin(title: "", longitude: coordinate.longitude, latitude: coordinate.latitude, context: fetchedResultsController.managedObjectContext)
+            let pin = Pin(title: "", longitude: coordinate.longitude, latitude: coordinate.latitude,
+                            context: fetchedResultsController.managedObjectContext)
             
-            geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), completionHandler: { (placemarks, error) in
+            geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
+                                            completionHandler: { (placemarks, error) in
+                defer {
+                    self.dataController.add(pin)
+                    self.dataController.save()
+                }
                 guard error == nil else {
                     NSLog("\(error!.localizedDescription)\n\(error!.description)")
                     return
                 }
                 if let placemark = placemarks?.first {
                     pin.title = placemark.name
-                    self.coreDataStack.save()
                 }
                 else {
                     NSLog("No placemarks identified for location at coordinates \(coordinate)")
@@ -151,7 +157,8 @@ extension MapViewController
 // MARK: - MKMapViewDelegate Implementation
 extension MapViewController: MKMapViewDelegate
 {
-    func mapView(mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl)
+    func mapView(mapView: MKMapView, annotationView view: MKAnnotationView,
+                calloutAccessoryControlTapped control: UIControl)
     {
         if control == view.rightCalloutAccessoryView {
             if let annotation = view.annotation as? MKPointAnnotation {
@@ -189,7 +196,8 @@ extension MapViewController: MKMapViewDelegate
 // MARK: - NSFetchedResultsControllerDelegate Implementation
 extension MapViewController: NSFetchedResultsControllerDelegate
 {
-    func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject, atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
+    func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject,
+        atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
     {
         if let pin = anObject as? Pin {
             switch type {
@@ -215,7 +223,8 @@ private extension Pin
     func toMKPointAnnotation() -> MKPointAnnotation
     {
         let annotation = MKPointAnnotation()
-        annotation.coordinate = CLLocationCoordinate2D(latitude: self.latitude!.doubleValue, longitude: self.longitude!.doubleValue)
+        annotation.coordinate = CLLocationCoordinate2D(latitude: self.latitude!.doubleValue,
+                                                        longitude: self.longitude!.doubleValue)
         annotation.title = self.title
         return annotation
     }

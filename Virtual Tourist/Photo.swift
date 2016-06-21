@@ -13,7 +13,8 @@ class Photo: NSManagedObject
 {
     convenience init(context: NSManagedObjectContext, url: String)
     {
-        self.init(entity: NSEntityDescription.entityForName("Photo", inManagedObjectContext: context)!, insertIntoManagedObjectContext: context)
+        self.init(entity: NSEntityDescription.entityForName("Photo", inManagedObjectContext: context)!,
+                    insertIntoManagedObjectContext: context)
         self.url = url
         downloadImage()
     }

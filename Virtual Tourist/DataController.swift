@@ -9,8 +9,9 @@
 import Foundation
 import CoreData
 
-class CoreDataStack
+class DataController
 {
+    private let networkOperationQueue = NSOperationQueue()
     private let model: NSManagedObjectModel
     private let coordinator: NSPersistentStoreCoordinator
     private let dbURL: NSURL
@@ -29,7 +30,8 @@ class CoreDataStack
             NSLog("Unable to create object model")
             return nil
         }
-        guard let docsDir = NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first else {
+        guard let docsDir = NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory,
+                                                                            inDomains: .UserDomainMask).first else {
             NSLog("Unable to obtain Documents directory for user")
             return nil
         }
@@ -63,19 +65,6 @@ class CoreDataStack
         try coordinator.addPersistentStoreWithType(NSSQLiteStoreType, configuration: nil, URL: dbURL, options: nil)
     }
     
-    func performBackgroundTask(batch: NSManagedObjectContext -> ())
-    {
-        backgroundContext.performBlock {
-            batch(self.backgroundContext)
-            do {
-                try self.backgroundContext.save()
-            }
-            catch let error as NSError {
-                logErrorAndAbort(error)
-            }
-        }
-    }
-    
     func save()
     {
         if context.hasChanges {
@@ -98,13 +87,36 @@ class CoreDataStack
         }
     }
     
+    func add(pin: Pin)
+    {
+        let criteria = FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue,
+            latitude: pin.latitude!.doubleValue, limit: 100, searchResultPageNumber: 1)
+        let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin)
+        let operation = FlickrNetworkOperation(processor: imageSearch)
+        networkOperationQueue.addOperation(operation)
+        
+    }
+    
+    func update(pin: Pin)
+    {
+        if let photoContainer = pin.photoContainer as? PhotoContainer {
+            let criteria = FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue,
+                latitude: pin.latitude!.doubleValue, limit: photoContainer.perPage!.integerValue,
+                searchResultPageNumber: photoContainer.page!.integerValue + 1)
+            let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin)
+            let operation = FlickrNetworkOperation(processor: imageSearch)
+            networkOperationQueue.addOperation(operation)
+        }
+        else {
+            add(pin)
+        }
+    }
+    
     func autoSaveWithInterval(interval: Int64)
     {
         if interval > 0 {
             save()
-            let nextIteration = dispatch_time(DISPATCH_TIME_NOW, interval * Int64(NSEC_PER_SEC))
-            
-            dispatch_after(nextIteration, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)) {
+            after(interval.seconds(), onQueue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)) {
                 self.autoSaveWithInterval(interval)
             }
         }

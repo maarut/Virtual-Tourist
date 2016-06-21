@@ -22,27 +22,34 @@ class FlickrPhoto
     var id: Int
     var url: NSURL
     
-    init(parsedJSON: [String: AnyObject], imageSize: FlickrClient.FlickrImageSize) throws
+    init?(parsedJSON: [String: AnyObject], imageSize: FlickrImageSize) throws
     {
         func makeError(errorString: String, code: FlickrPhotoErrorCodes) -> NSError
         {
-            return NSError(domain: "FlickrPhoto.init", code: code.rawValue, userInfo: [NSLocalizedDescriptionKey: errorString])
+            return NSError(domain: "FlickrPhoto.init", code: code.rawValue,
+                            userInfo: [NSLocalizedDescriptionKey: errorString])
         }
         
         guard let id = Int((parsedJSON[FlickrPhoto.idKey] as? String ?? "")) else {
             throw makeError("Key \"\(FlickrPhoto.idKey)\" not found", code: .IDNotFound)
         }
-        let urlKey = FlickrClient.parameterValueForImageSize(imageSize)
-        guard let url = parsedJSON[urlKey] as? String else {
-            throw makeError("Key \"\(urlKey)\" not found", code: .URLNotFound)
+        let urlKey = parameterKeyForImageSize(imageSize)
+        let url: String
+        if let parsedURL = parsedJSON[urlKey] as? String {
+            url = parsedURL
+        }
+        else {
+            NSLog("Key \"\(urlKey)\" not found")
+            return nil
         }
         
         self.id = id
         self.url = NSURL(string: url)!
     }
     
-    static func photoArrayFromJSON(parsedJson: [[String: AnyObject]], imageSize: FlickrClient.FlickrImageSize) throws -> [FlickrPhoto]
+    static func photoArrayFromJSON(parsedJson: [[String: AnyObject]], imageSize: FlickrImageSize) throws
+        -> [FlickrPhoto]
     {
-        return try parsedJson.map { try FlickrPhoto(parsedJSON: $0, imageSize: imageSize) }
+        return try parsedJson.flatMap { try FlickrPhoto(parsedJSON: $0, imageSize: imageSize) }
     }
 }
