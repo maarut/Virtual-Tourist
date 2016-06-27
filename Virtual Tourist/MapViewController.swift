@@ -82,7 +82,7 @@ private extension MapViewController
         let annotations = mapView.annotations as! [MKPointAnnotation]
         let index = annotations.indexOf {
             $0.coordinate.latitude == pin.latitude!.doubleValue &&
-                $0.coordinate.longitude == pin.longitude!.doubleValue
+            $0.coordinate.longitude == pin.longitude!.doubleValue
         }
         if let index = index {
             return annotations[index]
@@ -130,15 +130,9 @@ extension MapViewController
         if sender.state == .Began {
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
-            let pin = Pin(title: "", longitude: coordinate.longitude, latitude: coordinate.latitude,
-                            context: fetchedResultsController.managedObjectContext)
-            
+            let pin = dataController.createPin(longitude: coordinate.longitude, latitude: coordinate.latitude)
             geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                                            completionHandler: { (placemarks, error) in
-                defer {
-                    self.dataController.add(pin)
-                    self.dataController.save()
-                }
+                completionHandler: { (placemarks, error) in
                 guard error == nil else {
                     NSLog("\(error!.localizedDescription)\n\(error!.description)")
                     return
@@ -199,20 +193,22 @@ extension MapViewController: NSFetchedResultsControllerDelegate
     func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject,
         atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
     {
-        if let pin = anObject as? Pin {
-            switch type {
-            case .Insert:
-                loadPin(pin)
-                break
-            case .Delete:
-                removePin(pin)
-                break
-            case .Update, .Move:
-                if let annotation = annotationForPin(pin) {
-                    annotation.title = pin.title
-                    selectPin(pin)
+        onMainQueueDo {
+            if let pin = anObject as? Pin {
+                switch type {
+                case .Insert:
+                    self.loadPin(pin)
+                    break
+                case .Delete:
+                    self.removePin(pin)
+                    break
+                case .Update, .Move:
+                    if let annotation = self.annotationForPin(pin) {
+                        annotation.title = pin.title
+                        self.selectPin(pin)
+                    }
+                    break
                 }
-                break
             }
         }
     }

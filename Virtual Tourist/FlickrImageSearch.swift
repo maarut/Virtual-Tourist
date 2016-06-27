@@ -39,7 +39,7 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
     {
         let parameters: [String: AnyObject] = [
             Constants.ParameterKeys.Method: "flickr.photos.search",
-            Constants.ParameterKeys.Extras: parameterKeyForImageSize(.Medium),
+            Constants.ParameterKeys.Extras: stringOf([FlickrImageSize.Medium, .Small]),
             Constants.ParameterKeys.Longitude: criteria.longitude,
             Constants.ParameterKeys.Latitude: criteria.latitude,
             Constants.ParameterKeys.SafeSearch: Constants.ParameterValues.SafeSearchOn,
@@ -52,10 +52,12 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
     
     func processData(data: NSData)
     {
-        guard let parsedData = parseJSON(data) as? [String: AnyObject] else {
+        guard let parsedJSON = parseJSON(data) else { return }
+        guard let parsedData = parsedJSON as? [String: AnyObject] else {
+            
             let userInfo = [NSLocalizedDescriptionKey: "Could not format returned data in to the required format"]
             let error = NSError(domain: "FlickrImageSearch.processData",
-                            code: FlickrClientErrorCodes.JSONParse.rawValue, userInfo: userInfo)
+                                code: FlickrClientErrorCodes.JSONParse.rawValue, userInfo: userInfo)
             handleError(error)
             return
         }
@@ -63,38 +65,64 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         guard let jsonPhotos = parsedData[Constants.ResponseKeys.Photos] as? [String: AnyObject] else {
             let userInfo = [NSLocalizedDescriptionKey: "Key \(Constants.ResponseKeys.Photos) not found"]
             let error = NSError(domain: "FlickrImageSearch.processData",
-                            code: FlickrClientErrorCodes.KeyNotFound.rawValue, userInfo: userInfo)
+                code: FlickrClientErrorCodes.KeyNotFound.rawValue, userInfo: userInfo)
             handleError(error)
             return
         }
         
-        let photos: FlickrPhotos
-        do {
-            photos = try FlickrPhotos(parsedJSON: jsonPhotos, imageSize: .Medium)
-        }
-        catch let parseError as NSError {
-            let userInfo = [NSLocalizedDescriptionKey: "Unable to parse JSON object", NSUnderlyingErrorKey: parseError]
-            let error = NSError(domain: "FlickrImageSearch.processData",
-                                code: FlickrClientErrorCodes.KeyNotFound.rawValue, userInfo: userInfo)
-            handleError(error)
-            return
-        }
+        guard let photos = parseFlickrPhotosFrom(jsonPhotos) else { return }
         
+        pin.photoContainer = createPhotoContainerFrom(photos)
+        saveContext()
+    }
+    
+    private func saveContext()
+    {
+        pin.managedObjectContext?.performBlock {
+            if self.pin.managedObjectContext!.hasChanges {
+                do {
+                    try self.pin.managedObjectContext!.save()
+                }
+                catch let error as NSError {
+                    NSLog("\(error.description)\n\(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    private func createPhotoContainerFrom(photos: FlickrPhotos) -> PhotoContainer
+    {
         let photoContainer = PhotoContainer(context: pin.managedObjectContext!, pin: pin)
         photoContainer.page = photos.page
         photoContainer.pageCount = photos.pages
         photoContainer.total = photos.total
         photoContainer.perPage = photos.perPage
         let photoArray = photos.photos.map {
-            Photo(context: pin.managedObjectContext!, url: $0.url.absoluteString)
+            Photo(context: pin.managedObjectContext!, id: $0.id, url: $0.url.absoluteString)
         }
-        photoContainer.photos = NSSet(array: photoArray)
-        pin.photoContainer = photoContainer
+        photoContainer.photos = NSOrderedSet(array: photoArray)
+        return photoContainer
+    }
+    
+    private func parseFlickrPhotosFrom(json: [String: AnyObject]) -> FlickrPhotos?
+    {
+        let photos: FlickrPhotos?
+        do {
+            photos = try FlickrPhotos(parsedJSON: json, imageSize: .Medium)
+        }
+        catch let parseError as NSError {
+            photos = nil
+            let userInfo = [NSLocalizedDescriptionKey: "Unable to parse JSON object", NSUnderlyingErrorKey: parseError]
+            let error = NSError(domain: "FlickrImageSearch.processData",
+                                code: FlickrClientErrorCodes.KeyNotFound.rawValue, userInfo: userInfo)
+            handleError(error)
+        }
+        return photos
     }
     
     private func parseJSON(data: NSData) -> AnyObject?
     {
-        let parsedResult: AnyObject!
+        let parsedResult: AnyObject?
         do {
             parsedResult = try NSJSONSerialization.JSONObjectWithData(data, options: .AllowFragments)
         }
@@ -110,6 +138,6 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
     
     func handleError(error: NSError)
     {
-        
+        //TODO: Implement error handling logic
     }
 }

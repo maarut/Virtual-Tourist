@@ -26,7 +26,8 @@ class AlbumViewController: UIViewController
         mapView.removeAnnotations(mapView.annotations)
         if let pin = pin {
             let annotation = MKPointAnnotation()
-            annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue, longitude: pin.longitude!.doubleValue)
+            annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue,
+                longitude: pin.longitude!.doubleValue)
             annotation.title = pin.title
             mapView.setRegion(MKCoordinateRegionMakeWithDistance(annotation.coordinate, 1000, 1000), animated: true)
             mapView.addAnnotation(annotation)
@@ -78,14 +79,21 @@ extension AlbumViewController: UICollectionViewDataSource
 {
     func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int
     {
-        return 6
+        return (pin?.photoContainer as? PhotoContainer)?.photos?.count ?? 0
     }
     
-    func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell
+    func collectionView(collectionView: UICollectionView,
+        cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell
     {
         let cell = collectionView.dequeueReusableCellWithReuseIdentifier("imageView", forIndexPath: indexPath)
-        let imageView = cell.viewWithTag(1) as! UIImageView
-        imageView.image = UIImage(named: "pin")
+        if let imageData = ((pin?.photoContainer as? PhotoContainer)?.photos?[indexPath.row] as? Photo)?.imageData {
+            let imageView = cell.viewWithTag(1) as! UIImageView
+            imageView.image = UIImage(data: imageData)
+        }
+        else {
+            let activityIndicator = cell.viewWithTag(2) as! UIActivityIndicatorView
+            activityIndicator.startAnimating()
+        }
         return cell
     }
 }

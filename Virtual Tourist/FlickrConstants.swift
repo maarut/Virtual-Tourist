@@ -8,10 +8,22 @@
 
 import UIKit
 
-enum FlickrImageSize
+public enum FlickrImageSize: String, CustomStringConvertible
 {
-    case Medium
-    case Large
+    case Small = "url_m"
+    case Medium = "url_z"
+    case Large = "url_b"
+    
+    public var description: String {
+        get {
+            return self.rawValue
+        }
+    }
+}
+
+public func stringOf(array: Array<FlickrImageSize>) -> String
+{
+    return array.reduce("", combine: { $0.isEmpty ? $1.description : "\($0),\($1)" })
 }
 
 struct Constants
@@ -51,14 +63,4 @@ struct Constants
         static let Photos = "photos"
     }
     
-}
-
-func parameterKeyForImageSize(size: FlickrImageSize) -> String
-{
-    switch size {
-    case .Medium:
-        return "url_z"
-    case .Large:
-        return "url_h"
-    }
 }

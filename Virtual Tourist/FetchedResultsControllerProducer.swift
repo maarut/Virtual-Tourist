@@ -15,7 +15,7 @@ extension DataController
     {
         let request = NSFetchRequest(entityName: "Pin")
         request.sortDescriptors = [sortDescriptor]
-        return NSFetchedResultsController(fetchRequest: request, managedObjectContext: context, sectionNameKeyPath: nil,
-                                            cacheName: nil)
+        return NSFetchedResultsController(fetchRequest: request, managedObjectContext: context,
+            sectionNameKeyPath: nil, cacheName: nil)
     }
 }

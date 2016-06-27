@@ -23,7 +23,8 @@ class FlickrURL
         url.queryItems!.append(NSURLQueryItem(name: Constants.ParameterKeys.APIKey, value: Constants.API.Key))
         url.queryItems!.append(NSURLQueryItem(name: Constants.ParameterKeys.NoJSONCallback,
             value: Constants.ParameterValues.NoJSONCallbackOn))
-        url.queryItems!.append(NSURLQueryItem(name: Constants.ParameterKeys.Format, value: Constants.ParameterValues.JSONFormat))
+        url.queryItems!.append(NSURLQueryItem(name: Constants.ParameterKeys.Format,
+            value: Constants.ParameterValues.JSONFormat))
         
         self.url = url.URL!
     }

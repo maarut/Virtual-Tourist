@@ -19,7 +19,10 @@ class FlickrNetworkOperation: NSOperation
 {
     private let incomingData = NSMutableData()
     private var sessionTask: NSURLSessionTask?
-    private var session: NSURLSession!
+    private lazy var session: NSURLSession = {
+        return NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(),
+                     delegate: self, delegateQueue: nil)
+    }()
     private var processor: FlickrNetworkOperationProcessor
     
     var _finished: Bool = false
@@ -38,9 +41,6 @@ class FlickrNetworkOperation: NSOperation
     {
         self.processor = processor
         super.init()
-        
-        self.session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(),
-                                    delegate: self, delegateQueue: nil)
     }
     
     override func start()
@@ -50,7 +50,7 @@ class FlickrNetworkOperation: NSOperation
             return
         }
         sessionTask = session.dataTaskWithRequest(processor.request)
-        sessionTask?.resume()
+        sessionTask!.resume()
     }
 }
 
@@ -94,7 +94,7 @@ extension FlickrNetworkOperation: NSURLSessionDataDelegate
             processor.handleError(error!)
             return
         }
-        processor.processData(NSData(data: self.incomingData))
+        processor.processData(NSData(data: incomingData))
         
     }
 }

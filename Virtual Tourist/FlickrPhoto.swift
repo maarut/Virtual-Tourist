@@ -17,7 +17,6 @@ enum FlickrPhotoErrorCodes: Int
 class FlickrPhoto
 {
     static let idKey = "id"
-    static let baseUrlKey = "url_"
     
     var id: Int
     var url: NSURL
@@ -33,9 +32,12 @@ class FlickrPhoto
         guard let id = Int((parsedJSON[FlickrPhoto.idKey] as? String ?? "")) else {
             throw makeError("Key \"\(FlickrPhoto.idKey)\" not found", code: .IDNotFound)
         }
-        let urlKey = parameterKeyForImageSize(imageSize)
+        let urlKey = imageSize.description
         let url: String
         if let parsedURL = parsedJSON[urlKey] as? String {
+            url = parsedURL
+        }
+        else if let parsedURL = parsedJSON[FlickrImageSize.Small.description] as? String {
             url = parsedURL
         }
         else {

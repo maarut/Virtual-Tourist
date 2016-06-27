@@ -33,6 +33,7 @@
 		E3DFBF831D0ED21800501E4E /* FlickrURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DFBF821D0ED21800501E4E /* FlickrURL.swift */; };
 		E3DFBF851D0EDF9700501E4E /* FlickrImageSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DFBF841D0EDF9700501E4E /* FlickrImageSearch.swift */; };
 		E3DFBF891D14366F00501E4E /* Dispatch+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3DFBF881D14366F00501E4E /* Dispatch+Utils.swift */; };
+		E3EB33121D195E230001F1DE /* DownloadPhotoOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3EB33111D195E230001F1DE /* DownloadPhotoOperation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +80,7 @@
 		E3DFBF821D0ED21800501E4E /* FlickrURL.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlickrURL.swift; sourceTree = "<group>"; };
 		E3DFBF841D0EDF9700501E4E /* FlickrImageSearch.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlickrImageSearch.swift; sourceTree = "<group>"; };
 		E3DFBF881D14366F00501E4E /* Dispatch+Utils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Dispatch+Utils.swift"; sourceTree = "<group>"; };
+		E3EB33111D195E230001F1DE /* DownloadPhotoOperation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DownloadPhotoOperation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,6 +144,7 @@
 				E36E3DBA1D0AD19300781B8C /* FlickrNetworkOperation.swift */,
 				E3DFBF821D0ED21800501E4E /* FlickrURL.swift */,
 				E3DFBF841D0EDF9700501E4E /* FlickrImageSearch.swift */,
+				E3EB33111D195E230001F1DE /* DownloadPhotoOperation.swift */,
 			);
 			name = Flickr;
 			sourceTree = "<group>";
@@ -343,6 +346,7 @@
 				E3735B961D081FEE0048158A /* PhotoContainer+CoreDataProperties.swift in Sources */,
 				E3735B851D06D7010048158A /* FetchedResultsControllerProducer.swift in Sources */,
 				E3735B971D081FEE0048158A /* PhotoContainer.swift in Sources */,
+				E3EB33121D195E230001F1DE /* DownloadPhotoOperation.swift in Sources */,
 				E370327C1CF87B9700FC0D2F /* AlbumViewController.swift in Sources */,
 				E370325E1CF6F63100FC0D2F /* MapViewController.swift in Sources */,
 				E370325C1CF6F63100FC0D2F /* AppDelegate.swift in Sources */,

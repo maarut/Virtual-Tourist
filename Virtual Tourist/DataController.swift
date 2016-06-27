@@ -50,7 +50,7 @@ class DataController
         backgroundContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
         backgroundContext.name = "Background"
         backgroundContext.parentContext = context
-        
+
         do {
             try coordinator.addPersistentStoreWithType(NSSQLiteStoreType, configuration: nil, URL: dbURL, options: nil)
         }
@@ -87,39 +87,61 @@ class DataController
         }
     }
     
-    func add(pin: Pin)
+    func createPin(longitude longitude: Double, latitude: Double, title: String = "") -> Pin
     {
-        let criteria = FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue,
-            latitude: pin.latitude!.doubleValue, limit: 100, searchResultPageNumber: 1)
+        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: backgroundContext)
+        searchForImagesAt(pin)
+        return pin
+    }
+    
+    func searchForImagesAt(pin: Pin, isImageRefresh: Bool = false)
+    {
+        let criteria = createCriteriaFor(pin, isImageRefresh: isImageRefresh)
         let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin)
-        let operation = FlickrNetworkOperation(processor: imageSearch)
-        networkOperationQueue.addOperation(operation)
-        
-    }
-    
-    func update(pin: Pin)
-    {
-        if let photoContainer = pin.photoContainer as? PhotoContainer {
-            let criteria = FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue,
-                latitude: pin.latitude!.doubleValue, limit: photoContainer.perPage!.integerValue,
-                searchResultPageNumber: photoContainer.page!.integerValue + 1)
-            let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin)
-            let operation = FlickrNetworkOperation(processor: imageSearch)
-            networkOperationQueue.addOperation(operation)
+        let searchOp = FlickrNetworkOperation(processor: imageSearch)
+        let imageDownloadOp = NSBlockOperation { 
+            let ops = self.createDownloadPhotoOperations(pin)
+            let saveOp = NSBlockOperation {
+                pin.managedObjectContext?.performBlock {
+                    if pin.managedObjectContext!.hasChanges {
+                        do {
+                            try pin.managedObjectContext!.save()
+                        }
+                        catch let error as NSError {
+                            NSLog("\(error.description)\n\(error.localizedDescription)")
+                        }
+                    }
+                    self.save()
+                }
+            }
+            for o in ops { saveOp.addDependency(o) }
+            self.networkOperationQueue.addOperations(ops + [saveOp], waitUntilFinished: false)
         }
-        else {
-            add(pin)
-        }
+        imageDownloadOp.addDependency(searchOp)
+        networkOperationQueue.addOperations([searchOp, imageDownloadOp], waitUntilFinished: false)
     }
-    
-    func autoSaveWithInterval(interval: Int64)
+}
+
+private extension DataController
+{
+    func createCriteriaFor(pin: Pin, isImageRefresh: Bool) -> FlickrImageSearchCriteria
     {
-        if interval > 0 {
-            save()
-            after(interval.seconds(), onQueue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)) {
-                self.autoSaveWithInterval(interval)
+        if isImageRefresh {
+            if let photoContainer = pin.photoContainer as? PhotoContainer {
+                return FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue,
+                                                 latitude: pin.latitude!.doubleValue, limit: photoContainer.perPage!.integerValue,
+                                                 searchResultPageNumber: photoContainer.page!.integerValue + 1)
             }
         }
+        return FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue, latitude: pin.latitude!.doubleValue,
+                                         limit: 100, searchResultPageNumber: 1)
+    }
+    
+    func createDownloadPhotoOperations(pin: Pin) -> [DownloadPhotoOperation]
+    {
+        return (pin.photoContainer as? PhotoContainer)?.photos?.array.map {
+            DownloadPhotoOperation(photo: $0 as! Photo)
+            } ?? []
     }
 }
 

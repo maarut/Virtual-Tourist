@@ -34,7 +34,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             mapVC = vc.topViewController as? MapViewController {
             mapVC.dataController = dataController
         }
-        dataController.autoSaveWithInterval(30)
+//        dataController.autoSaveWithInterval(30)
         return true
     }
 
