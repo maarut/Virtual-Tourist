@@ -18,4 +18,13 @@ extension DataController
         return NSFetchedResultsController(fetchRequest: request, managedObjectContext: context,
             sectionNameKeyPath: nil, cacheName: nil)
     }
+    
+    func allPhotosFor(pin: Pin) -> NSFetchedResultsController
+    {
+        let request = NSFetchRequest(entityName: "Photo")
+        request.sortDescriptors = [NSSortDescriptor(key: "id", ascending: true)]
+        request.predicate = NSPredicate(format: "photoContainer.pin == %@", pin)
+        return NSFetchedResultsController(fetchRequest: request, managedObjectContext: context,
+            sectionNameKeyPath: nil, cacheName: nil)
+    }
 }

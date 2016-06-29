@@ -8,6 +8,7 @@
 
 import UIKit
 import MapKit
+import CoreData
 
 // MARK: - UIViewController Implementation
 class AlbumViewController: UIViewController
@@ -19,6 +20,26 @@ class AlbumViewController: UIViewController
     
     // MARK: - Public Variables
     var pin: Pin?
+    var dataController: DataController!
+    
+    // MARK: - Private Variables
+    private var fetchedResults: NSFetchedResultsController!
+    
+    override func viewDidLoad()
+    {
+        super.viewDidLoad()
+        if let pin = pin {
+            fetchedResults = dataController.allPhotosFor(pin)
+            fetchedResults.delegate = self
+            do {
+                try fetchedResults.performFetch()
+            }
+            catch let error as NSError {
+                NSLog("Unable to performFetch:\n\(error)")
+            }
+            pin.addObserver(self, forKeyPath: "title", options: .New, context: nil)
+        }
+    }
     
     override func viewWillAppear(animated: Bool)
     {
@@ -33,6 +54,12 @@ class AlbumViewController: UIViewController
             mapView.addAnnotation(annotation)
             mapView.selectAnnotation(annotation, animated: true)
         }
+    }
+    
+    override func viewWillDisappear(animated: Bool)
+    {
+        super.viewWillDisappear(animated)
+        pin?.removeObserver(self, forKeyPath: "title")
     }
 }
 
@@ -71,7 +98,12 @@ extension AlbumViewController: MKMapViewDelegate
 // MARK: - UICollectionViewDelegate Implementation
 extension AlbumViewController: UICollectionViewDelegate
 {
-    
+    func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath)
+    {
+        if let photo = fetchedResults.objectAtIndexPath(indexPath) as? Photo {
+            dataController.delete(photo)
+        }
+    }
 }
 
 // MARK: - UICollectionViewDataSource Implementation
@@ -79,21 +111,64 @@ extension AlbumViewController: UICollectionViewDataSource
 {
     func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int
     {
-        return (pin?.photoContainer as? PhotoContainer)?.photos?.count ?? 0
+        return fetchedResults.fetchedObjects?.count ?? 0
     }
     
     func collectionView(collectionView: UICollectionView,
         cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell
     {
         let cell = collectionView.dequeueReusableCellWithReuseIdentifier("imageView", forIndexPath: indexPath)
-        if let imageData = ((pin?.photoContainer as? PhotoContainer)?.photos?[indexPath.row] as? Photo)?.imageData {
-            let imageView = cell.viewWithTag(1) as! UIImageView
-            imageView.image = UIImage(data: imageData)
-        }
-        else {
-            let activityIndicator = cell.viewWithTag(2) as! UIActivityIndicatorView
-            activityIndicator.startAnimating()
+        let imageView = cell.viewWithTag(1) as! UIImageView
+        let activityIndicator = cell.viewWithTag(2) as! UIActivityIndicatorView
+        imageView.image = nil
+        if let photo = fetchedResults.objectAtIndexPath(indexPath) as? Photo {
+            if let imageData = photo.imageData {
+                activityIndicator.stopAnimating()
+                imageView.image = UIImage(data: imageData)
+            }
+            else if !photo.isDownloading {
+                dataController.downloadImageFor(photo)
+                activityIndicator.startAnimating()
+            }
         }
         return cell
+    }
+}
+
+// MARK: - KVO
+extension AlbumViewController
+{
+    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?,
+        context: UnsafeMutablePointer<Void>)
+    {
+        if keyPath == "title" {
+            if let annotation = mapView.selectedAnnotations.first as? MKPointAnnotation {
+                annotation.title = (object as? Pin)?.title
+            }
+        }
+        else {
+            super.observeValueForKeyPath(keyPath, ofObject: object, change: change, context: context)
+        }
+    }
+}
+
+// MARK: - NSFetchedResultsControllerDelegate Implementation
+extension AlbumViewController: NSFetchedResultsControllerDelegate
+{
+    func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject,
+        atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
+    {
+        onMainQueueDo {
+            switch type {
+            case .Insert, .Move, .Update:
+                self.collectionView.reloadData()
+                break
+            case .Delete:
+                if let indexPath = indexPath {
+                    self.collectionView.deleteItemsAtIndexPaths([indexPath])
+                }
+                break
+            }
+        }
     }
 }

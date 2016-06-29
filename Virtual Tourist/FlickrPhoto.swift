@@ -49,8 +49,8 @@ class FlickrPhoto
         self.url = NSURL(string: url)!
     }
     
-    static func photoArrayFromJSON(parsedJson: [[String: AnyObject]], imageSize: FlickrImageSize) throws
-        -> [FlickrPhoto]
+    static func photoArrayFromJSON(parsedJson: [[String: AnyObject]],
+        imageSize: FlickrImageSize) throws -> [FlickrPhoto]
     {
         return try parsedJson.flatMap { try FlickrPhoto(parsedJSON: $0, imageSize: imageSize) }
     }

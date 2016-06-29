@@ -57,7 +57,7 @@ class FlickrNetworkOperation: NSOperation
 extension FlickrNetworkOperation: NSURLSessionDataDelegate
 {
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse,
-                    completionHandler: (NSURLSessionResponseDisposition) -> Void)
+        completionHandler: (NSURLSessionResponseDisposition) -> Void)
     {
         if cancelled {
             sessionTask?.cancel()

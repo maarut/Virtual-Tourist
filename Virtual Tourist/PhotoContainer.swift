@@ -15,7 +15,7 @@ class PhotoContainer: NSManagedObject
     convenience init(context: NSManagedObjectContext, pin: Pin)
     {
         self.init(entity: NSEntityDescription.entityForName("PhotoContainer", inManagedObjectContext: context)!,
-                    insertIntoManagedObjectContext: context)
+            insertIntoManagedObjectContext: context)
         self.pin = pin
     }
 }

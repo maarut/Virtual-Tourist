@@ -205,7 +205,7 @@
 				E37032721CF6F63100FC0D2F /* Info.plist */,
 			);
 			path = "Virtual TouristTests";
-			sourceTree = "<group>";
+			sourceTree = SOURCE_ROOT;
 		};
 		E370327D1CF87BE300FC0D2F /* View Controllers */ = {
 			isa = PBXGroup;

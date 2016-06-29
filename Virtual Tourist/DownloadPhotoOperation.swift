@@ -50,7 +50,7 @@ class DownloadPhotoOperation: NSOperation
 extension DownloadPhotoOperation: NSURLSessionDelegate
 {
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse,
-                    completionHandler: (NSURLSessionResponseDisposition) -> Void)
+        completionHandler: (NSURLSessionResponseDisposition) -> Void)
     {
         if cancelled {
             sessionTask?.cancel()
@@ -67,14 +67,16 @@ extension DownloadPhotoOperation: NSURLSessionDelegate
     }
     
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask,
-                    didBecomeDownloadTask downloadTask: NSURLSessionDownloadTask)
+        didBecomeDownloadTask downloadTask: NSURLSessionDownloadTask)
     {
         if cancelled {
             downloadTask.cancel()
             finished = true
+            photo.isDownloading = false
             return
         }
         sessionTask = downloadTask
+        photo.isDownloading = true
     }
     
     func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?)
@@ -88,17 +90,7 @@ extension DownloadPhotoOperation: NSURLSessionDelegate
             NSLog("\(error!.description)\n\(error!.localizedDescription)")
             return
         }
-        photo.managedObjectContext?.performBlock {
-            self.photo.imageData = NSData(data: self.incomingData)
-            if self.photo.managedObjectContext!.hasChanges {
-                do {
-                    try self.photo.managedObjectContext!.save()
-                }
-                catch let error as NSError {
-                    NSLog("\(error.description)\n\(error.localizedDescription)")
-                }
-            }
-        }
+        photo.setValue(NSData(data: incomingData), forKey: "imageData")
     }
 }
 
@@ -107,8 +99,8 @@ extension DownloadPhotoOperation: NSURLSessionDownloadDelegate
     func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask,
         didFinishDownloadingToURL location: NSURL)
     {
-        defer { finished = true }
         if cancelled {
+            finished = true
             cancelTask()
             return
         }
@@ -152,5 +144,6 @@ private extension DownloadPhotoOperation
         else {
             sessionTask?.cancel()
         }
+        photo.isDownloading = false
     }
 }

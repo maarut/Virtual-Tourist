@@ -73,21 +73,6 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         guard let photos = parseFlickrPhotosFrom(jsonPhotos) else { return }
         
         pin.photoContainer = createPhotoContainerFrom(photos)
-        saveContext()
-    }
-    
-    private func saveContext()
-    {
-        pin.managedObjectContext?.performBlock {
-            if self.pin.managedObjectContext!.hasChanges {
-                do {
-                    try self.pin.managedObjectContext!.save()
-                }
-                catch let error as NSError {
-                    NSLog("\(error.description)\n\(error.localizedDescription)")
-                }
-            }
-        }
     }
     
     private func createPhotoContainerFrom(photos: FlickrPhotos) -> PhotoContainer

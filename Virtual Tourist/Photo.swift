@@ -11,10 +11,12 @@ import CoreData
 
 class Photo: NSManagedObject
 {
+    var isDownloading = false
+    
     convenience init(context: NSManagedObjectContext, id: Int, url: String)
     {
         self.init(entity: NSEntityDescription.entityForName("Photo", inManagedObjectContext: context)!,
-                    insertIntoManagedObjectContext: context)
+            insertIntoManagedObjectContext: context)
         self.url = url
         self.id = id
     }

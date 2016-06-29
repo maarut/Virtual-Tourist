@@ -64,7 +64,10 @@ class MapViewController: UIViewController
                 if let selectedPin = selectedPin {
                     let nextVC = segue.destinationViewController as! AlbumViewController
                     nextVC.pin = selectedPin
-                    deselectPin(selectedPin)
+                    nextVC.dataController = dataController
+                    for annotation in mapView.selectedAnnotations {
+                        mapView.deselectAnnotation(annotation, animated: false)
+                    }
                 }
                 break
             default:
@@ -77,7 +80,7 @@ class MapViewController: UIViewController
 // MARK: - Pin -> MapView interface
 private extension MapViewController
 {
-    func annotationForPin(pin: Pin) -> MKPointAnnotation?
+    func annotationFor(pin: Pin) -> MKPointAnnotation?
     {
         let annotations = mapView.annotations as! [MKPointAnnotation]
         let index = annotations.indexOf {
@@ -92,27 +95,20 @@ private extension MapViewController
     
     func loadPin(pin: Pin)
     {
-        mapView.addAnnotation(pin.toMKPointAnnotation())
+        mapView.addAnnotation(MKPointAnnotation(pin: pin))
     }
     
     func removePin(pin: Pin)
     {
-        if let annotation = annotationForPin(pin) {
+        if let annotation = annotationFor(pin) {
             mapView.removeAnnotation(annotation)
         }
     }
     
     func selectPin(pin: Pin)
     {
-        if let annotation = annotationForPin(pin) {
+        if let annotation = annotationFor(pin) {
             mapView.selectAnnotation(annotation, animated: true)
-        }
-    }
-    
-    func deselectPin(pin: Pin)
-    {
-        if let annotation = annotationForPin(pin) {
-            mapView.deselectAnnotation(annotation, animated: false)
         }
     }
     
@@ -130,7 +126,8 @@ extension MapViewController
         if sender.state == .Began {
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
-            let pin = dataController.createPin(longitude: coordinate.longitude, latitude: coordinate.latitude)
+            let pin = dataController.createPin(longitude: coordinate.longitude, latitude: coordinate.latitude,
+                title: "Searching...")
             geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
                 completionHandler: { (placemarks, error) in
                 guard error == nil else {
@@ -203,7 +200,7 @@ extension MapViewController: NSFetchedResultsControllerDelegate
                     self.removePin(pin)
                     break
                 case .Update, .Move:
-                    if let annotation = self.annotationForPin(pin) {
+                    if let annotation = self.annotationFor(pin) {
                         annotation.title = pin.title
                         self.selectPin(pin)
                     }
@@ -214,14 +211,13 @@ extension MapViewController: NSFetchedResultsControllerDelegate
     }
 }
 
-private extension Pin
+// MARK: - MKPointAnnotation Convenience Init
+private extension MKPointAnnotation
 {
-    func toMKPointAnnotation() -> MKPointAnnotation
+    convenience init(pin: Pin)
     {
-        let annotation = MKPointAnnotation()
-        annotation.coordinate = CLLocationCoordinate2D(latitude: self.latitude!.doubleValue,
-                                                        longitude: self.longitude!.doubleValue)
-        annotation.title = self.title
-        return annotation
+        self.init()
+        coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue, longitude: pin.longitude!.doubleValue)
+        title = pin.title
     }
 }
