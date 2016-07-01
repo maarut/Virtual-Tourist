@@ -11,13 +11,19 @@ import CoreData
 
 class Photo: NSManagedObject
 {
-    var isDownloading = false
-    
     convenience init(context: NSManagedObjectContext, id: Int, url: String)
     {
         self.init(entity: NSEntityDescription.entityForName("Photo", inManagedObjectContext: context)!,
             insertIntoManagedObjectContext: context)
         self.url = url
         self.id = id
+        self.isDownloading = NSNumber(bool: false)
+    }
+    
+    // Wrapper property because isDownloading is stored as an NSNumber
+    var isDownloadingImage: Bool {
+        get {
+            return isDownloading!.boolValue
+        }
     }
 }

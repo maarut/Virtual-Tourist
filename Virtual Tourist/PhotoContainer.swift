@@ -12,10 +12,9 @@ import CoreData
 
 class PhotoContainer: NSManagedObject
 {
-    convenience init(context: NSManagedObjectContext, pin: Pin)
+    convenience init(context: NSManagedObjectContext)
     {
         self.init(entity: NSEntityDescription.entityForName("PhotoContainer", inManagedObjectContext: context)!,
             insertIntoManagedObjectContext: context)
-        self.pin = pin
     }
 }

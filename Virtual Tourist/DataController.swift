@@ -16,7 +16,6 @@ class DataController
     private let coordinator: NSPersistentStoreCoordinator
     private let dbURL: NSURL
     private let persistingContext: NSManagedObjectContext
-    private let backgroundContext: NSManagedObjectContext
     
     let context: NSManagedObjectContext
     
@@ -46,13 +45,12 @@ class DataController
         context = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
         context.name = "Main"
         context.parentContext = persistingContext
-        
-        backgroundContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
-        backgroundContext.name = "Background"
-        backgroundContext.parentContext = context
 
         do {
-            try coordinator.addPersistentStoreWithType(NSSQLiteStoreType, configuration: nil, URL: dbURL, options: nil)
+            let options = [NSMigratePersistentStoresAutomaticallyOption: true,
+                NSInferMappingModelAutomaticallyOption: true]
+            try coordinator.addPersistentStoreWithType(NSSQLiteStoreType, configuration: nil, URL: dbURL,
+                options: options)
         }
         catch let error as NSError {
             logErrorAndAbort(error)
@@ -67,9 +65,11 @@ class DataController
     
     func save()
     {
-        if context.hasChanges {
-            do { try context.save() }
-            catch let error as NSError { logErrorAndAbort(error) }
+        context.performBlockAndWait {
+            if self.context.hasChanges {
+                do { try self.context.save() }
+                catch let error as NSError { logErrorAndAbort(error) }
+            }
         }
         persistingContext.performBlock {
             if self.persistingContext.hasChanges {
@@ -81,23 +81,15 @@ class DataController
     
     func delete(object: NSManagedObject)
     {
-        object.managedObjectContext?.performBlock {
-            object.managedObjectContext!.deleteObject(object)
-            do {
-                try object.managedObjectContext!.save()
-                self.save()
-            }
-            catch let error as NSError {
-                NSLog("\(error.description)\n\(error.localizedDescription)")
-            }
+        context.performBlock {
+            self.context.deleteObject(object)
+            self.save()
         }
     }
     
     func createPin(longitude longitude: Double, latitude: Double, title: String = "") -> Pin
     {
-        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: backgroundContext)
-        do { try backgroundContext.save() }
-        catch let error as NSError { NSLog("\(error.description)\n\(error.localizedDescription)") }
+        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: context)
         self.save()
         searchForImagesAt(pin)
         return pin
@@ -105,12 +97,17 @@ class DataController
     
     func searchForImagesAt(pin: Pin, isImageRefresh: Bool = false)
     {
+        let imageSearchContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
+        imageSearchContext.name = "Image Search Context"
+        imageSearchContext.parentContext = context
+        
         let criteria = createCriteriaFor(pin, isImageRefresh: isImageRefresh)
-        let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin)
+        let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin, using: imageSearchContext)
         let searchOp = FlickrNetworkOperation(processor: imageSearch)
         let imageDownloadOp = NSBlockOperation {
+            let pin = self.context.objectWithID(pin.objectID) as! Pin  
             let ops = self.createDownloadWithSaveOperationsFor(
-                (pin.photoContainer as? PhotoContainer)?.photos?.array as! [Photo])
+                (pin.photoContainer as? PhotoContainer)?.photos?.array as? [Photo] ?? [])
             let saveOp = NSBlockOperation { self.save() }
             for o in ops { saveOp.addDependency(o) }
             self.networkOperationQueue.addOperations(ops + [saveOp], waitUntilFinished: false)
@@ -135,9 +132,10 @@ private extension DataController
     {
         if isImageRefresh {
             if let photoContainer = pin.photoContainer as? PhotoContainer {
+                let page = (photoContainer.page!.integerValue + 1) % (photoContainer.pageCount!.integerValue + 1)
                 return FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue,
                     latitude: pin.latitude!.doubleValue, limit: photoContainer.perPage!.integerValue,
-                    searchResultPageNumber: photoContainer.page!.integerValue + 1)
+                    searchResultPageNumber: page)
             }
         }
         if let photoContainer = pin.photoContainer as? PhotoContainer {
@@ -151,11 +149,15 @@ private extension DataController
     func createDownloadWithSaveOperationsFor(photos: [Photo]) -> [NSOperation]
     {
         let mappedElements: [[NSOperation]] = photos.map { photo in
-            let downloadOp = DownloadPhotoOperation(photo: photo)
+            let downloadContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
+            downloadContext.name = "Photo Download Context"
+            downloadContext.parentContext = self.context
+            let photo = downloadContext.objectWithID(photo.objectID) as! Photo
+            let downloadOp = DownloadPhotoOperation(photo: photo, saveInto: downloadContext)
             let saveOp = NSBlockOperation {
-                photo.managedObjectContext?.performBlock {
-                    if photo.managedObjectContext!.hasChanges {
-                        do { try photo.managedObjectContext!.save() }
+                downloadContext.performBlockAndWait {
+                    if downloadContext.hasChanges {
+                        do { try downloadContext.save() }
                         catch let error as NSError { NSLog("\(error.description)\n\(error.localizedDescription)") }
                     }
                 }

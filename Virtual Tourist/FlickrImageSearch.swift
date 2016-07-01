@@ -26,7 +26,8 @@ enum FlickrClientErrorCodes: Int
 
 class FlickrImageSearch: FlickrNetworkOperationProcessor
 {
-    private let pin: Pin
+    private let context: NSManagedObjectContext
+    private let pinId: NSManagedObjectID
     
     private let _request: NSURLRequest
     var request: NSURLRequest {
@@ -35,8 +36,11 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         }
     }
     
-    init(criteria: FlickrImageSearchCriteria, insertResultsInto pin: Pin)
+    init(criteria: FlickrImageSearchCriteria, insertResultsInto pin: Pin, using context: NSManagedObjectContext)
     {
+        let pageNumber: Int
+        if (criteria.limit * criteria.searchResultPageNumber) > 2000 { pageNumber = 1 }
+        else { pageNumber = criteria.searchResultPageNumber }
         let parameters: [String: AnyObject] = [
             Constants.ParameterKeys.Method: "flickr.photos.search",
             Constants.ParameterKeys.Extras: stringOf([FlickrImageSize.Medium, .Small]),
@@ -44,10 +48,11 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
             Constants.ParameterKeys.Latitude: criteria.latitude,
             Constants.ParameterKeys.SafeSearch: Constants.ParameterValues.SafeSearchOn,
             Constants.ParameterKeys.PerPageLimit: criteria.limit,
-            Constants.ParameterKeys.Page: criteria.searchResultPageNumber
+            Constants.ParameterKeys.Page: pageNumber
         ]
         _request = NSURLRequest(URL: FlickrURL(parameters: parameters).url)
-        self.pin = pin
+        self.context = context
+        self.pinId = pin.objectID
     }
     
     func processData(data: NSData)
@@ -71,25 +76,53 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         }
         
         guard let photos = parseFlickrPhotosFrom(jsonPhotos) else { return }
-        
-        pin.photoContainer = createPhotoContainerFrom(photos)
+        context.performBlockAndWait {
+            let pin = self.context.objectWithID(self.pinId) as! Pin
+            if let pc = pin.photoContainer {
+                self.context.deleteObject(pc)
+                self.saveOrRollbackContext()
+            }
+            let photoContainer = self.createPhotoContainerFrom(photos)
+            pin.photoContainer = photoContainer
+            photoContainer.pin = pin
+            self.saveOrRollbackContext()
+        }
     }
     
-    private func createPhotoContainerFrom(photos: FlickrPhotos) -> PhotoContainer
+    func handleError(error: NSError)
     {
-        let photoContainer = PhotoContainer(context: pin.managedObjectContext!, pin: pin)
+        //TODO: Implement error handling logic
+    }
+}
+
+private extension FlickrImageSearch
+{
+    // Call from context.performBlock() or performBlockAndWait()
+    func saveOrRollbackContext()
+    {
+        if self.context.hasChanges {
+            do { try context.save() }
+            catch let error as NSError {
+                NSLog("\(error.description)\n\(error.localizedDescription)")
+                context.rollback()
+            }
+        }
+    }
+    
+    func createPhotoContainerFrom(photos: FlickrPhotos) -> PhotoContainer
+    {
+        let photoContainer = PhotoContainer(context: context)
         photoContainer.page = photos.page
         photoContainer.pageCount = photos.pages
         photoContainer.total = photos.total
         photoContainer.perPage = photos.perPage
-        let photoArray = photos.photos.map {
-            Photo(context: pin.managedObjectContext!, id: $0.id, url: $0.url.absoluteString)
-        }
+        let photoArray = photos.photos.map { Photo(context: context, id: $0.id, url: $0.url.absoluteString) }
+        for photo in photoArray { photo.photoContainer = photoContainer }
         photoContainer.photos = NSOrderedSet(array: photoArray)
         return photoContainer
     }
     
-    private func parseFlickrPhotosFrom(json: [String: AnyObject]) -> FlickrPhotos?
+    func parseFlickrPhotosFrom(json: [String: AnyObject]) -> FlickrPhotos?
     {
         let photos: FlickrPhotos?
         do {
@@ -105,7 +138,7 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         return photos
     }
     
-    private func parseJSON(data: NSData) -> AnyObject?
+    func parseJSON(data: NSData) -> AnyObject?
     {
         let parsedResult: AnyObject?
         do {
@@ -119,10 +152,5 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
             handleError(error)
         }
         return parsedResult
-    }
-    
-    func handleError(error: NSError)
-    {
-        //TODO: Implement error handling logic
     }
 }

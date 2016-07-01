@@ -77,6 +77,7 @@
 		E3735B911D081FEE0048158A /* PhotoContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoContainer.swift; sourceTree = "<group>"; };
 		E3735B981D0827A70048158A /* Array+Utils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Array+Utils.swift"; sourceTree = "<group>"; };
 		E37624AC1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = VirtualTouristModel.xcdatamodel; sourceTree = "<group>"; };
+		E3A503AD1D25132400FE7452 /* VirtualTouristModel 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "VirtualTouristModel 2.xcdatamodel"; sourceTree = "<group>"; };
 		E3DFBF821D0ED21800501E4E /* FlickrURL.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlickrURL.swift; sourceTree = "<group>"; };
 		E3DFBF841D0EDF9700501E4E /* FlickrImageSearch.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlickrImageSearch.swift; sourceTree = "<group>"; };
 		E3DFBF881D14366F00501E4E /* Dispatch+Utils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Dispatch+Utils.swift"; sourceTree = "<group>"; };
@@ -570,9 +571,10 @@
 		E37624AB1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
+				E3A503AD1D25132400FE7452 /* VirtualTouristModel 2.xcdatamodel */,
 				E37624AC1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodel */,
 			);
-			currentVersion = E37624AC1CF9C28800DBB113 /* VirtualTouristModel.xcdatamodel */;
+			currentVersion = E3A503AD1D25132400FE7452 /* VirtualTouristModel 2.xcdatamodel */;
 			path = VirtualTouristModel.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

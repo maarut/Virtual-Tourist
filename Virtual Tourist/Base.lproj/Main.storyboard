@@ -108,7 +108,7 @@
                                 <rect key="frame" x="0.0" y="556" width="600" height="44"/>
                                 <items>
                                     <barButtonItem style="plain" systemItem="flexibleSpace" id="YW9-pl-YBg"/>
-                                    <barButtonItem enabled="NO" title="New Collection" id="Dgb-o0-3fO">
+                                    <barButtonItem title="New Collection" id="Dgb-o0-3fO">
                                         <connections>
                                             <action selector="newCollectionTapped:" destination="yNJ-xD-WNh" id="xfd-EE-B2U"/>
                                         </connections>

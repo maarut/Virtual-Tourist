@@ -10,6 +10,8 @@ import UIKit
 import MapKit
 import CoreData
 
+private let placeholderTitle = "Searching..."
+
 // MARK: - UIViewController Implementation
 class MapViewController: UIViewController
 {
@@ -93,6 +95,17 @@ private extension MapViewController
         return nil
     }
     
+    func pinFor(annotation: MKAnnotation) -> Pin?
+    {
+        let coordinate = annotation.coordinate
+        let searchResult = fetchedResultsController.fetchedObjects?.first( {
+            let pin = $0 as! Pin
+            return pin.latitude?.doubleValue == coordinate.latitude &&
+                pin.longitude!.doubleValue == coordinate.longitude
+        })
+        return searchResult as? Pin
+    }
+    
     func loadPin(pin: Pin)
     {
         mapView.addAnnotation(MKPointAnnotation(pin: pin))
@@ -116,6 +129,21 @@ private extension MapViewController
     {
         for pin in pins { loadPin(pin) }
     }
+    
+    func searchForTitleFor(pin: Pin)
+    {
+        let coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue,
+            longitude: pin.longitude!.doubleValue)
+        geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude,
+            longitude: coordinate.longitude)) { (placemarks, error) in
+            guard error == nil else {
+                NSLog("\(error!.localizedDescription)\n\(error!.description)")
+                return
+            }
+            if let placemark = placemarks?.first { pin.title = placemark.name }
+            else { NSLog("No placemarks identified for location at coordinates \(coordinate)") }
+        }
+    }
 }
 
 // MARK: - IBActions
@@ -127,20 +155,8 @@ extension MapViewController
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
             let pin = dataController.createPin(longitude: coordinate.longitude, latitude: coordinate.latitude,
-                title: "Searching...")
-            geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                completionHandler: { (placemarks, error) in
-                guard error == nil else {
-                    NSLog("\(error!.localizedDescription)\n\(error!.description)")
-                    return
-                }
-                if let placemark = placemarks?.first {
-                    pin.title = placemark.name
-                }
-                else {
-                    NSLog("No placemarks identified for location at coordinates \(coordinate)")
-                }
-            })
+                title: placeholderTitle)
+            searchForTitleFor(pin)
         }
     }
 }
@@ -160,6 +176,14 @@ extension MapViewController: MKMapViewDelegate
                 }
                 performSegueWithIdentifier("albumViewSegue", sender: self)
             }
+        }
+    }
+    
+    func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView)
+    {
+        if let annotation = view.annotation, let pin = pinFor(annotation) {
+            let pin = dataController.context.objectWithID(pin.objectID) as! Pin
+            if pin.title == placeholderTitle { searchForTitleFor(pin) }
         }
     }
     

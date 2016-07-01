@@ -23,20 +23,17 @@ class AlbumViewController: UIViewController
     var dataController: DataController!
     
     // MARK: - Private Variables
-    private var fetchedResults: NSFetchedResultsController!
+    private var allPhotos: NSFetchedResultsController!
+    private var changes = [NSFetchedResultsChangeType: [NSIndexPath]]()
     
     override func viewDidLoad()
     {
         super.viewDidLoad()
         if let pin = pin {
-            fetchedResults = dataController.allPhotosFor(pin)
-            fetchedResults.delegate = self
-            do {
-                try fetchedResults.performFetch()
-            }
-            catch let error as NSError {
-                NSLog("Unable to performFetch:\n\(error)")
-            }
+            allPhotos = dataController.allPhotosFor(pin)
+            allPhotos.delegate = self
+            do { try allPhotos.performFetch() }
+            catch let error as NSError { NSLog("Unable to performFetch:\n\(error)") }
             pin.addObserver(self, forKeyPath: "title", options: .New, context: nil)
         }
     }
@@ -46,6 +43,7 @@ class AlbumViewController: UIViewController
         super.viewWillAppear(animated)
         mapView.removeAnnotations(mapView.annotations)
         if let pin = pin {
+            if pin.photoContainer == nil { dataController.searchForImagesAt(pin) }
             let annotation = MKPointAnnotation()
             annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue,
                 longitude: pin.longitude!.doubleValue)
@@ -68,7 +66,7 @@ extension AlbumViewController
 {
     @IBAction func newCollectionTapped(sender: AnyObject)
     {
-        print("Search for new images from Flickr")
+        if let pin = pin { dataController.searchForImagesAt(pin, isImageRefresh: true) }
     }
 }
 
@@ -100,8 +98,18 @@ extension AlbumViewController: UICollectionViewDelegate
 {
     func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath)
     {
-        if let photo = fetchedResults.objectAtIndexPath(indexPath) as? Photo {
-            dataController.delete(photo)
+        if let photo = allPhotos.objectAtIndexPath(indexPath) as? Photo {
+            if photo.isDownloadingImage || photo.imageData == nil {
+                let alertView = UIAlertController(title: "Cannot Remove Image",
+                    message: "Cannot remove image yet. Please wait for the download to complete, then try again.",
+                    preferredStyle: .Alert)
+                alertView.addAction(UIAlertAction(title: "Dismiss", style: .Default,
+                    handler: { _ in self.dismissViewControllerAnimated(true, completion: nil) } ))
+                self.presentViewController(alertView, animated: true, completion: nil)
+            }
+            else {
+                dataController.delete(photo)
+            }
         }
     }
 }
@@ -111,7 +119,7 @@ extension AlbumViewController: UICollectionViewDataSource
 {
     func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int
     {
-        return fetchedResults.fetchedObjects?.count ?? 0
+        return allPhotos.fetchedObjects?.count ?? 0
     }
     
     func collectionView(collectionView: UICollectionView,
@@ -121,12 +129,12 @@ extension AlbumViewController: UICollectionViewDataSource
         let imageView = cell.viewWithTag(1) as! UIImageView
         let activityIndicator = cell.viewWithTag(2) as! UIActivityIndicatorView
         imageView.image = nil
-        if let photo = fetchedResults.objectAtIndexPath(indexPath) as? Photo {
+        if let photo = allPhotos.objectAtIndexPath(indexPath) as? Photo {
             if let imageData = photo.imageData {
                 activityIndicator.stopAnimating()
                 imageView.image = UIImage(data: imageData)
             }
-            else if !photo.isDownloading {
+            else if !photo.isDownloadingImage {
                 dataController.downloadImageFor(photo)
                 activityIndicator.startAnimating()
             }
@@ -155,20 +163,47 @@ extension AlbumViewController
 // MARK: - NSFetchedResultsControllerDelegate Implementation
 extension AlbumViewController: NSFetchedResultsControllerDelegate
 {
+    func controllerWillChangeContent(controller: NSFetchedResultsController)
+    {
+        changes = [:]
+    }
+    
+    func controllerDidChangeContent(controller: NSFetchedResultsController)
+    {
+        self.collectionView.performBatchUpdates({ 
+            for (type, indexPaths) in self.changes {
+                switch type {
+                case .Insert:
+                    self.collectionView.insertItemsAtIndexPaths(indexPaths)
+                    break
+                case .Delete:
+                    self.collectionView.deleteItemsAtIndexPaths(indexPaths)
+                    break
+                default:
+                    break
+                }
+            }
+        }, completion: nil)
+    }
+    
     func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject,
         atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
     {
-        onMainQueueDo {
-            switch type {
-            case .Insert, .Move, .Update:
-                self.collectionView.reloadData()
-                break
-            case .Delete:
-                if let indexPath = indexPath {
-                    self.collectionView.deleteItemsAtIndexPaths([indexPath])
-                }
-                break
-            }
+        switch type {
+        case .Insert:
+            if changes[.Insert] == nil { changes[.Insert] = [] }
+            changes[.Insert]!.append(newIndexPath!)
+            break
+        case .Move:
+            onMainQueueDo { self.collectionView.moveItemAtIndexPath(indexPath!, toIndexPath: newIndexPath!) }
+            break
+        case .Update:
+            onMainQueueDo { self.collectionView.reloadItemsAtIndexPaths([indexPath!]) }
+            break
+        case .Delete:
+            if changes[.Delete] == nil { changes[.Delete] = [] }
+            changes[.Delete]!.append(indexPath!)
+            break
         }
     }
 }

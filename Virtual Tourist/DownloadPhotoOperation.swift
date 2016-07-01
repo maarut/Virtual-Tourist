@@ -7,11 +7,14 @@
 //
 
 import Foundation
+import CoreData
 
+// MARK: - NSOperation Overrides
 class DownloadPhotoOperation: NSOperation
 {
     private let incomingData = NSMutableData()
-    private let photo: Photo
+    private let photoId: NSManagedObjectID
+    private let context: NSManagedObjectContext
     private var sessionTask: NSURLSessionTask?
     private lazy var session: NSURLSession = {
         return NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(),
@@ -30,9 +33,10 @@ class DownloadPhotoOperation: NSOperation
         }
     }
     
-    init(photo: Photo)
+    init(photo: Photo, saveInto context: NSManagedObjectContext)
     {
-        self.photo = photo
+        self.photoId = photo.objectID
+        self.context = context
         super.init()
     }
     
@@ -47,6 +51,7 @@ class DownloadPhotoOperation: NSOperation
     }
 }
 
+// MARK: - NSURLSessionDelegate Implementation
 extension DownloadPhotoOperation: NSURLSessionDelegate
 {
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse,
@@ -72,11 +77,11 @@ extension DownloadPhotoOperation: NSURLSessionDelegate
         if cancelled {
             downloadTask.cancel()
             finished = true
-            photo.isDownloading = false
+            setIsDownloading(false)
             return
         }
         sessionTask = downloadTask
-        photo.isDownloading = true
+        setIsDownloading(true)
     }
     
     func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?)
@@ -90,10 +95,19 @@ extension DownloadPhotoOperation: NSURLSessionDelegate
             NSLog("\(error!.description)\n\(error!.localizedDescription)")
             return
         }
-        photo.setValue(NSData(data: incomingData), forKey: "imageData")
+        context.performBlockAndWait {
+            let photo = self.context.objectWithID(self.photoId) as! Photo
+            photo.imageData = NSData(data: self.incomingData)
+            do { try self.context.save() }
+            catch let error as NSError {
+                self.context.rollback()
+                NSLog("Derp\(error.localizedDescription)\n\(error.description)")
+            }
+        }
     }
 }
 
+// MARK: - NSURLSessionDownloadDelegate Implementation
 extension DownloadPhotoOperation: NSURLSessionDownloadDelegate
 {
     func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask,
@@ -108,18 +122,33 @@ extension DownloadPhotoOperation: NSURLSessionDownloadDelegate
     }
 }
 
+// MARK: - Private Methods
 private extension DownloadPhotoOperation
 {
+    func setIsDownloading(isDownloading: Bool)
+    {
+        context.performBlockAndWait {
+            let photo = self.context.objectWithID(self.photoId) as! Photo
+            photo.isDownloading = isDownloading
+            do { try self.context.save() }
+            catch let error as NSError {
+                NSLog("Could not save isDownloading for Photo: \(photo)\n" +
+                    "\(error.description)\n\(error.localizedDescription)")
+            }
+        }
+    }
+    
     func task() -> NSURLSessionTask
     {
-        let pathToResumeData = resumeDataURL()
+        let photo = context.objectWithID(photoId) as! Photo
+        let pathToResumeData = resumeDataURLFor(photo)
         if let resumeData = NSData(contentsOfURL: pathToResumeData) {
             return session.downloadTaskWithResumeData(resumeData)
         }
         return session.downloadTaskWithURL(NSURL(string: photo.url!)!)
     }
     
-    func resumeDataURL() -> NSURL
+    func resumeDataURLFor(photo: Photo) -> NSURL
     {
         let cacheDirs = NSFileManager.defaultManager().URLsForDirectory(.CachesDirectory, inDomains: .UserDomainMask)
         if let cacheDir = cacheDirs.first {
@@ -132,18 +161,15 @@ private extension DownloadPhotoOperation
     {
         if let sessionTask = sessionTask as? NSURLSessionDownloadTask {
             sessionTask.cancelByProducingResumeData({ (resumeData) in
-                let pathToResumeData = self.resumeDataURL()
-                do {
-                    try resumeData?.writeToURL(pathToResumeData, options: NSDataWritingOptions.init(rawValue:0))
-                }
-                catch let error as NSError {
-                    NSLog("\(error.description)\n\(error.localizedDescription)")
-                }
+                let photo = self.context.objectWithID(self.photoId) as! Photo
+                let pathToResumeData = self.resumeDataURLFor(photo)
+                do { try resumeData?.writeToURL(pathToResumeData, options: NSDataWritingOptions.init(rawValue:0)) }
+                catch let error as NSError { NSLog("\(error.description)\n\(error.localizedDescription)") }
             })
         }
         else {
             sessionTask?.cancel()
         }
-        photo.isDownloading = false
+        setIsDownloading(false)
     }
 }
