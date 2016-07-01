@@ -21,6 +21,7 @@ class MapViewController: UIViewController
     
     // MARK: - Private Variables
     private var selectedPin: Pin?
+    private var isDraggingPin: Bool = false
     private var fetchedResultsController: NSFetchedResultsController!
     private let geocoder = CLGeocoder()
     
@@ -165,6 +166,32 @@ extension MapViewController
 extension MapViewController: MKMapViewDelegate
 {
     func mapView(mapView: MKMapView, annotationView view: MKAnnotationView,
+        didChangeDragState newState: MKAnnotationViewDragState, fromOldState oldState: MKAnnotationViewDragState)
+    {
+        switch newState {
+        case .Starting:
+            isDraggingPin = true
+            if let annotation = view.annotation as? MKPointAnnotation,
+                let pin = pinFor(annotation) {
+                dataController.delete(pin)
+            }
+            break
+        case .Ending:
+            if let annotation = view.annotation as? MKPointAnnotation {
+                let pin = dataController.createPin(longitude: annotation.coordinate.longitude,
+                    latitude: annotation.coordinate.latitude)
+                searchForTitleFor(pin)
+            }
+            isDraggingPin = false
+            break
+        case .Canceling:
+            isDraggingPin = false
+        default:
+            break
+        }
+    }
+    
+    func mapView(mapView: MKMapView, annotationView view: MKAnnotationView,
                 calloutAccessoryControlTapped control: UIControl)
     {
         if control == view.rightCalloutAccessoryView {
@@ -202,6 +229,7 @@ extension MapViewController: MKMapViewDelegate
             pinView!.canShowCallout = true
             pinView!.pinTintColor = UIColor.redColor()
             pinView!.animatesDrop = true
+            pinView!.draggable = true
             pinView!.rightCalloutAccessoryView = UIButton(type: .DetailDisclosure)
         }
         return pinView
@@ -214,6 +242,7 @@ extension MapViewController: NSFetchedResultsControllerDelegate
     func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject,
         atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?)
     {
+        if isDraggingPin { return }
         onMainQueueDo {
             if let pin = anObject as? Pin {
                 switch type {

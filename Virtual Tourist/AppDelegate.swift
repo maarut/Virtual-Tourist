@@ -14,19 +14,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     private (set) var dataController: DataController!
 
-
-    private func dropAllData()
-    {
-        do {
-            try dataController.dropAllData()
-        }
-        catch {
-            NSLog("Unable to drop data")
-        }
-    }
-    
-    func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?)
-        -> Bool
+    func application(application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool
     {
         // Override point for customization after application launch.
         dataController = DataController(withModelName: "VirtualTouristModel")
@@ -34,7 +23,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             mapVC = vc.topViewController as? MapViewController {
             mapVC.dataController = dataController
         }
-//        dataController.autoSaveWithInterval(30)
         return true
     }
 
