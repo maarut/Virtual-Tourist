@@ -14,6 +14,9 @@ class DownloadPhotoOperation: NSOperation
 {
     private let incomingData = NSMutableData()
     private let photoId: NSManagedObjectID
+    private let flickrId: Int
+    private let url: NSURL
+    
     private let context: NSManagedObjectContext
     private var sessionTask: NSURLSessionTask?
     private lazy var session: NSURLSession = {
@@ -36,6 +39,8 @@ class DownloadPhotoOperation: NSOperation
     init(photo: Photo, saveInto context: NSManagedObjectContext)
     {
         self.photoId = photo.objectID
+        self.flickrId = photo.id!.integerValue
+        self.url = NSURL(string: photo.url!)!
         self.context = context
         super.init()
     }
@@ -101,7 +106,7 @@ extension DownloadPhotoOperation: NSURLSessionDelegate
             do { try self.context.save() }
             catch let error as NSError {
                 self.context.rollback()
-                NSLog("Derp\(error.localizedDescription)\n\(error.description)")
+                NSLog("\(error.localizedDescription)\n\(error.description)")
             }
         }
     }
@@ -140,19 +145,18 @@ private extension DownloadPhotoOperation
     
     func task() -> NSURLSessionTask
     {
-        let photo = context.objectWithID(photoId) as! Photo
-        let pathToResumeData = resumeDataURLFor(photo)
+        let pathToResumeData = resumeDataURL()
         if let resumeData = NSData(contentsOfURL: pathToResumeData) {
             return session.downloadTaskWithResumeData(resumeData)
         }
-        return session.downloadTaskWithURL(NSURL(string: photo.url!)!)
+        return session.downloadTaskWithURL(url)
     }
     
-    func resumeDataURLFor(photo: Photo) -> NSURL
+    func resumeDataURL() -> NSURL
     {
         let cacheDirs = NSFileManager.defaultManager().URLsForDirectory(.CachesDirectory, inDomains: .UserDomainMask)
         if let cacheDir = cacheDirs.first {
-            return cacheDir.URLByAppendingPathComponent("\(photo.id!.integerValue).resumeData")
+            return cacheDir.URLByAppendingPathComponent("\(flickrId).resumeData")
         }
         return NSURL()
     }
@@ -161,8 +165,7 @@ private extension DownloadPhotoOperation
     {
         if let sessionTask = sessionTask as? NSURLSessionDownloadTask {
             sessionTask.cancelByProducingResumeData({ (resumeData) in
-                let photo = self.context.objectWithID(self.photoId) as! Photo
-                let pathToResumeData = self.resumeDataURLFor(photo)
+                let pathToResumeData = self.resumeDataURL()
                 do { try resumeData?.writeToURL(pathToResumeData, options: NSDataWritingOptions.init(rawValue:0)) }
                 catch let error as NSError { NSLog("\(error.description)\n\(error.localizedDescription)") }
             })

@@ -66,7 +66,7 @@ class MapViewController: UIViewController
             case "albumViewSegue":
                 if let selectedPin = selectedPin {
                     let nextVC = segue.destinationViewController as! AlbumViewController
-                    nextVC.pin = selectedPin
+                    nextVC.pinId = selectedPin.objectID
                     nextVC.dataController = dataController
                     for annotation in mapView.selectedAnnotations {
                         mapView.deselectAnnotation(annotation, animated: false)
@@ -141,7 +141,12 @@ private extension MapViewController
                 NSLog("\(error!.localizedDescription)\n\(error!.description)")
                 return
             }
-            if let placemark = placemarks?.first { pin.title = placemark.name }
+            if let placemark = placemarks?.first {
+                self.dataController.mainContext.performBlock {
+                    pin.title = placemark.name
+                    self.dataController.save()
+                }
+            }
             else { NSLog("No placemarks identified for location at coordinates \(coordinate)") }
         }
     }
@@ -173,7 +178,7 @@ extension MapViewController: MKMapViewDelegate
             isDraggingPin = true
             if let annotation = view.annotation as? MKPointAnnotation,
                 let pin = pinFor(annotation) {
-                dataController.delete(pin)
+                dataController.deleteFromMainContext(pin)
             }
             break
         case .Ending:
@@ -209,8 +214,9 @@ extension MapViewController: MKMapViewDelegate
     func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView)
     {
         if let annotation = view.annotation, let pin = pinFor(annotation) {
-            let pin = dataController.context.objectWithID(pin.objectID) as! Pin
-            if pin.title == placeholderTitle { searchForTitleFor(pin) }
+            if pin.title == placeholderTitle {
+                dataController.mainContext.performBlock { self.searchForTitleFor(pin) }
+            }
         }
     }
     

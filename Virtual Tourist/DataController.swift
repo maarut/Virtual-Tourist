@@ -17,7 +17,7 @@ class DataController
     private let dbURL: NSURL
     private let persistingContext: NSManagedObjectContext
     
-    let context: NSManagedObjectContext
+    let mainContext: NSManagedObjectContext
     
     init?(withModelName modelName: String)
     {
@@ -42,9 +42,9 @@ class DataController
         persistingContext.name = "Persisting"
         persistingContext.persistentStoreCoordinator = coordinator
         
-        context = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
-        context.name = "Main"
-        context.parentContext = persistingContext
+        mainContext = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
+        mainContext.name = "Main"
+        mainContext.parentContext = persistingContext
 
         do {
             let options = [NSMigratePersistentStoresAutomaticallyOption: true,
@@ -65,9 +65,9 @@ class DataController
     
     func save()
     {
-        context.performBlockAndWait {
-            if self.context.hasChanges {
-                do { try self.context.save() }
+        mainContext.performBlockAndWait {
+            if self.mainContext.hasChanges {
+                do { try self.mainContext.save() }
                 catch let error as NSError { logErrorAndAbort(error) }
             }
         }
@@ -79,17 +79,26 @@ class DataController
         }
     }
     
-    func delete(object: NSManagedObject)
+    func deleteObjectsFromMainContext(objects: [NSManagedObject])
     {
-        context.performBlock {
-            self.context.deleteObject(object)
+        mainContext.performBlock {
+            for o in objects { self.mainContext.deleteObject(o) }
             self.save()
         }
     }
     
+    func deleteFromMainContext(object: NSManagedObject)
+    {
+        deleteObjectsFromMainContext([object])
+    }
+}
+
+// These methods must be called from the performBlock or performBlockAndWait of an NSManagedObjectContext
+extension DataController
+{
     func createPin(longitude longitude: Double, latitude: Double, title: String = "") -> Pin
     {
-        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: context)
+        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: mainContext)
         self.save()
         searchForImagesAt(pin)
         return pin
@@ -99,18 +108,20 @@ class DataController
     {
         let imageSearchContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
         imageSearchContext.name = "Image Search Context"
-        imageSearchContext.parentContext = context
-        
+        imageSearchContext.parentContext = mainContext
+        let pinId = pin.objectID
         let criteria = createCriteriaFor(pin, isImageRefresh: isImageRefresh)
         let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin, using: imageSearchContext)
         let searchOp = FlickrNetworkOperation(processor: imageSearch)
         let imageDownloadOp = NSBlockOperation {
-            let pin = self.context.objectWithID(pin.objectID) as! Pin  
-            let ops = self.createDownloadWithSaveOperationsFor(
-                (pin.photoContainer as? PhotoContainer)?.photos?.array as? [Photo] ?? [])
-            let saveOp = NSBlockOperation { self.save() }
-            for o in ops { saveOp.addDependency(o) }
-            self.networkOperationQueue.addOperations(ops + [saveOp], waitUntilFinished: false)
+            self.mainContext.performBlockAndWait {
+                let pin = self.mainContext.objectWithID(pinId) as! Pin
+                let ops = self.createDownloadWithSaveOperationsFor(
+                    (pin.photoContainer as? PhotoContainer)?.photos?.array as? [Photo] ?? [])
+                let saveOp = NSBlockOperation { self.save() }
+                for o in ops { saveOp.addDependency(o) }
+                self.networkOperationQueue.addOperations(ops + [saveOp], waitUntilFinished: false)
+            }
         }
         imageDownloadOp.addDependency(searchOp)
         networkOperationQueue.addOperations([searchOp, imageDownloadOp], waitUntilFinished: false)
@@ -119,9 +130,9 @@ class DataController
     func downloadImageFor(photo: Photo)
     {
         let saveOp = NSBlockOperation { self.save() }
-        let downloadOps = createDownloadWithSaveOperationsFor([photo])
+        let downloadOps = self.createDownloadWithSaveOperationsFor([photo])
         for op in downloadOps { saveOp.addDependency(op) }
-        networkOperationQueue.addOperations(downloadOps + [saveOp], waitUntilFinished: false)
+        self.networkOperationQueue.addOperations(downloadOps + [saveOp], waitUntilFinished: false)
     }
 }
 
@@ -143,16 +154,17 @@ private extension DataController
                 limit: photoContainer.perPage!.integerValue, searchResultPageNumber: photoContainer.page!.integerValue)
         }
         return FlickrImageSearchCriteria(longitude: pin.longitude!.doubleValue, latitude: pin.latitude!.doubleValue,
-            limit: 100, searchResultPageNumber: 1)
+            limit: 25, searchResultPageNumber: 1)
     }
     
     func createDownloadWithSaveOperationsFor(photos: [Photo]) -> [NSOperation]
     {
-        let mappedElements: [[NSOperation]] = photos.map { photo in
+        var mappedElements = [NSOperation]()
+        for photo in photos {
             let downloadContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
-            downloadContext.name = "Photo Download Context"
-            downloadContext.parentContext = self.context
-            let photo = downloadContext.objectWithID(photo.objectID) as! Photo
+            downloadContext.name = "Photo Download Context for \(photo.id!.integerValue)"
+            downloadContext.parentContext = self.mainContext
+            
             let downloadOp = DownloadPhotoOperation(photo: photo, saveInto: downloadContext)
             let saveOp = NSBlockOperation {
                 downloadContext.performBlockAndWait {
@@ -163,9 +175,9 @@ private extension DataController
                 }
             }
             saveOp.addDependency(downloadOp)
-            return [downloadOp, saveOp]
+            mappedElements += [downloadOp, saveOp]
         }
-        return Array(mappedElements.flatten())
+        return mappedElements
     }
 }
 

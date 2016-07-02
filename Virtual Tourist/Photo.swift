@@ -23,7 +23,7 @@ class Photo: NSManagedObject
     // Wrapper property because isDownloading is stored as an NSNumber
     var isDownloadingImage: Bool {
         get {
-            return isDownloading!.boolValue
+            return isDownloading?.boolValue ?? false
         }
     }
 }
