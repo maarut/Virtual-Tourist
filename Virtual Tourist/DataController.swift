@@ -17,7 +17,7 @@ class DataController
     private let dbURL: NSURL
     private let persistingContext: NSManagedObjectContext
     
-    let mainContext: NSManagedObjectContext
+    let mainThreadContext: NSManagedObjectContext
     
     init?(withModelName modelName: String)
     {
@@ -42,9 +42,9 @@ class DataController
         persistingContext.name = "Persisting"
         persistingContext.persistentStoreCoordinator = coordinator
         
-        mainContext = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
-        mainContext.name = "Main"
-        mainContext.parentContext = persistingContext
+        mainThreadContext = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
+        mainThreadContext.name = "Main"
+        mainThreadContext.parentContext = persistingContext
 
         do {
             let options = [NSMigratePersistentStoresAutomaticallyOption: true,
@@ -65,9 +65,9 @@ class DataController
     
     func save()
     {
-        mainContext.performBlockAndWait {
-            if self.mainContext.hasChanges {
-                do { try self.mainContext.save() }
+        mainThreadContext.performBlockAndWait {
+            if self.mainThreadContext.hasChanges {
+                do { try self.mainThreadContext.save() }
                 catch let error as NSError { logErrorAndAbort(error) }
             }
         }
@@ -81,8 +81,8 @@ class DataController
     
     func deleteObjectsFromMainContext(objects: [NSManagedObject])
     {
-        mainContext.performBlock {
-            for o in objects { self.mainContext.deleteObject(o) }
+        mainThreadContext.performBlock {
+            for o in objects { self.mainThreadContext.deleteObject(o) }
             self.save()
         }
     }
@@ -98,7 +98,7 @@ extension DataController
 {
     func createPin(longitude longitude: Double, latitude: Double, title: String = "") -> Pin
     {
-        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: mainContext)
+        let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: mainThreadContext)
         self.save()
         searchForImagesAt(pin)
         return pin
@@ -108,14 +108,14 @@ extension DataController
     {
         let imageSearchContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
         imageSearchContext.name = "Image Search Context"
-        imageSearchContext.parentContext = mainContext
+        imageSearchContext.parentContext = mainThreadContext
         let pinId = pin.objectID
         let criteria = createCriteriaFor(pin, isImageRefresh: isImageRefresh)
         let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin, using: imageSearchContext)
         let searchOp = FlickrNetworkOperation(processor: imageSearch)
         let imageDownloadOp = NSBlockOperation {
-            self.mainContext.performBlockAndWait {
-                let pin = self.mainContext.objectWithID(pinId) as! Pin
+            self.mainThreadContext.performBlockAndWait {
+                let pin = self.mainThreadContext.objectWithID(pinId) as! Pin
                 let ops = self.createDownloadWithSaveOperationsFor(
                     (pin.photoContainer as? PhotoContainer)?.photos?.array as? [Photo] ?? [])
                 let saveOp = NSBlockOperation { self.save() }
@@ -163,7 +163,7 @@ private extension DataController
         for photo in photos {
             let downloadContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
             downloadContext.name = "Photo Download Context for \(photo.id!.integerValue)"
-            downloadContext.parentContext = self.mainContext
+            downloadContext.parentContext = self.mainThreadContext
             
             let downloadOp = DownloadPhotoOperation(photo: photo, saveInto: downloadContext)
             let saveOp = NSBlockOperation {

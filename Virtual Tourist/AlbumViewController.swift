@@ -31,7 +31,7 @@ class AlbumViewController: UIViewController
     {
         super.viewDidLoad()
         if let pinId = pinId {
-            let pin = self.dataController.mainContext.objectWithID(pinId) as! Pin
+            let pin = self.dataController.mainThreadContext.objectWithID(pinId) as! Pin
             self.allPhotos = self.dataController.allPhotosFor(pin)
             self.allPhotos.delegate = self
             self.pinFromContext = self.dataController.fetchedResultsControllerFor(pin)
@@ -49,7 +49,7 @@ class AlbumViewController: UIViewController
         super.viewWillAppear(animated)
         mapView.removeAnnotations(mapView.annotations)
         if let pinId = pinId {
-            let pin = self.dataController.mainContext.objectWithID(pinId) as! Pin
+            let pin = self.dataController.mainThreadContext.objectWithID(pinId) as! Pin
             if pin.photoContainer == nil { dataController.searchForImagesAt(pin) }
                 let annotation = MKPointAnnotation()
                 annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue,
@@ -68,7 +68,7 @@ extension AlbumViewController
     @IBAction func newCollectionTapped(sender: AnyObject)
     {
         if let pinId = pinId {
-            let pin = dataController.mainContext.objectWithID(pinId) as! Pin
+            let pin = dataController.mainThreadContext.objectWithID(pinId) as! Pin
             let photos = ((pin.photoContainer as? PhotoContainer)?.photos ?? []).map { $0 as! NSManagedObject }
             dataController.deleteObjectsFromMainContext(photos)
             dataController.searchForImagesAt(pin, isImageRefresh: true)

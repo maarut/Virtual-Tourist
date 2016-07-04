@@ -142,7 +142,7 @@ private extension MapViewController
                 return
             }
             if let placemark = placemarks?.first {
-                self.dataController.mainContext.performBlock {
+                self.dataController.mainThreadContext.performBlock {
                     pin.title = placemark.name
                     self.dataController.save()
                 }
@@ -215,7 +215,7 @@ extension MapViewController: MKMapViewDelegate
     {
         if let annotation = view.annotation, let pin = pinFor(annotation) {
             if pin.title == placeholderTitle {
-                dataController.mainContext.performBlock { self.searchForTitleFor(pin) }
+                dataController.mainThreadContext.performBlock { self.searchForTitleFor(pin) }
             }
         }
     }
