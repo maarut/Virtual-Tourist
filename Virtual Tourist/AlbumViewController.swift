@@ -50,7 +50,7 @@ class AlbumViewController: UIViewController
         mapView.removeAnnotations(mapView.annotations)
         if let pinId = pinId {
             let pin = self.dataController.mainThreadContext.objectWithID(pinId) as! Pin
-            if pin.photoContainer == nil { dataController.searchForImagesAt(pin) }
+            if pin.photoContainer == nil { dataController.searchForImagesAt(pin, errorHandler: self.handleError) }
                 let annotation = MKPointAnnotation()
                 annotation.coordinate = CLLocationCoordinate2D(latitude: pin.latitude!.doubleValue,
                     longitude: pin.longitude!.doubleValue)
@@ -71,7 +71,7 @@ extension AlbumViewController
             let pin = dataController.mainThreadContext.objectWithID(pinId) as! Pin
             let photos = ((pin.photoContainer as? PhotoContainer)?.photos ?? []).map { $0 as! NSManagedObject }
             dataController.deleteObjectsFromMainContext(photos)
-            dataController.searchForImagesAt(pin, isImageRefresh: true)
+            dataController.searchForImagesAt(pin, isImageRefresh: true, errorHandler: self.handleError)
         }
     }
 }
@@ -214,6 +214,20 @@ extension AlbumViewController: NSFetchedResultsControllerDelegate
             break
         default:
             break
+        }
+    }
+}
+
+// MARK: - Private Methods
+private extension AlbumViewController
+{
+    func handleError(error: NSError)
+    {
+        onMainQueueDo {
+            let alertVC = UIAlertController(title: "Operation Failed", message: error.localizedDescription,
+                preferredStyle: .Alert)
+            alertVC.addAction(UIAlertAction(title: "Dismiss", style: .Default, handler: nil))
+            self.presentViewController(alertVC, animated: true, completion: nil)
         }
     }
 }

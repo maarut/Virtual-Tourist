@@ -50,7 +50,7 @@ class MapViewController: UIViewController
     {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: true)
-        self.selectedPin = nil
+        selectedPin = nil
     }
     
     override func viewDidDisappear(animated: Bool)
@@ -150,6 +150,16 @@ private extension MapViewController
             else { NSLog("No placemarks identified for location at coordinates \(coordinate)") }
         }
     }
+    
+    func handleError(error: NSError)
+    {
+        onMainQueueDo {
+            let alertVC = UIAlertController(title: "Operation Failed", message: error.localizedDescription,
+                preferredStyle: .Alert)
+            alertVC.addAction(UIAlertAction(title: "Dismiss", style: .Default, handler: nil))
+            self.presentViewController(alertVC, animated: true, completion: nil)
+        }
+    }
 }
 
 // MARK: - IBActions
@@ -161,7 +171,7 @@ extension MapViewController
             let location = sender.locationInView(mapView)
             let coordinate = mapView.convertPoint(location, toCoordinateFromView: mapView)
             let pin = dataController.createPin(longitude: coordinate.longitude, latitude: coordinate.latitude,
-                title: placeholderTitle)
+                title: placeholderTitle, errorHandler: self.handleError)
             searchForTitleFor(pin)
         }
     }
@@ -184,7 +194,7 @@ extension MapViewController: MKMapViewDelegate
         case .Ending:
             if let annotation = view.annotation as? MKPointAnnotation {
                 let pin = dataController.createPin(longitude: annotation.coordinate.longitude,
-                    latitude: annotation.coordinate.latitude)
+                    latitude: annotation.coordinate.latitude, errorHandler: self.handleError)
                 searchForTitleFor(pin)
             }
             isDraggingPin = false
@@ -213,9 +223,11 @@ extension MapViewController: MKMapViewDelegate
     
     func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView)
     {
-        if let annotation = view.annotation, let pin = pinFor(annotation) {
-            if pin.title == placeholderTitle {
-                dataController.mainThreadContext.performBlock { self.searchForTitleFor(pin) }
+        self.dataController.mainThreadContext.performBlock {
+            if let annotation = view.annotation, let pin = self.pinFor(annotation) {
+                if pin.title == placeholderTitle {
+                    self.searchForTitleFor(pin)
+                }
             }
         }
     }

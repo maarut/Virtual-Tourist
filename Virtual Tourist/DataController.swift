@@ -96,22 +96,24 @@ class DataController
 // These methods must be called from the performBlock or performBlockAndWait of an NSManagedObjectContext
 extension DataController
 {
-    func createPin(longitude longitude: Double, latitude: Double, title: String = "") -> Pin
+    func createPin(longitude longitude: Double, latitude: Double, title: String = "",
+        errorHandler: (NSError) -> Void) -> Pin
     {
         let pin = Pin(title: title, longitude: longitude, latitude: latitude, context: mainThreadContext)
         self.save()
-        searchForImagesAt(pin)
+        searchForImagesAt(pin, errorHandler: errorHandler)
         return pin
     }
     
-    func searchForImagesAt(pin: Pin, isImageRefresh: Bool = false)
+    func searchForImagesAt(pin: Pin, isImageRefresh: Bool = false, errorHandler: (NSError) -> Void)
     {
         let imageSearchContext = NSManagedObjectContext(concurrencyType: .PrivateQueueConcurrencyType)
         imageSearchContext.name = "Image Search Context"
         imageSearchContext.parentContext = mainThreadContext
         let pinId = pin.objectID
         let criteria = createCriteriaFor(pin, isImageRefresh: isImageRefresh)
-        let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin, using: imageSearchContext)
+        let imageSearch = FlickrImageSearch(criteria: criteria, insertResultsInto: pin, using: imageSearchContext,
+            errorHandler: errorHandler)
         let searchOp = FlickrNetworkOperation(processor: imageSearch)
         let imageDownloadOp = NSBlockOperation {
             self.mainThreadContext.performBlockAndWait {

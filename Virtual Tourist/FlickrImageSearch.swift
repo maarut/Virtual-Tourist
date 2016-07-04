@@ -28,6 +28,7 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
 {
     private let context: NSManagedObjectContext
     private let pinId: NSManagedObjectID
+    private let errorHandler: (NSError) -> Void
     
     private let _request: NSURLRequest
     var request: NSURLRequest {
@@ -36,7 +37,8 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         }
     }
     
-    init(criteria: FlickrImageSearchCriteria, insertResultsInto pin: Pin, using context: NSManagedObjectContext)
+    init(criteria: FlickrImageSearchCriteria, insertResultsInto pin: Pin, using context: NSManagedObjectContext,
+         errorHandler: (NSError) -> Void)
     {
         let pageNumber: Int
         if (criteria.limit * criteria.searchResultPageNumber) > 2000 { pageNumber = 1 }
@@ -53,6 +55,7 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
         _request = NSURLRequest(URL: FlickrURL(parameters: parameters).url)
         self.context = context
         self.pinId = pin.objectID
+        self.errorHandler = errorHandler
     }
     
     func processData(data: NSData)
@@ -91,7 +94,8 @@ class FlickrImageSearch: FlickrNetworkOperationProcessor
     
     func handleError(error: NSError)
     {
-        //TODO: Implement error handling logic
+        NSLog("\(error.description)\n\(error.localizedDescription)")
+        errorHandler(error)
     }
 }
 
@@ -103,7 +107,7 @@ private extension FlickrImageSearch
         if self.context.hasChanges {
             do { try context.save() }
             catch let error as NSError {
-                NSLog("\(error.description)\n\(error.localizedDescription)")
+                self.handleError(error)
                 context.rollback()
             }
         }
